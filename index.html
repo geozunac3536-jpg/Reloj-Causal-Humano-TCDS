@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reloj Causal Humano — TCDS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+        content="Reloj Causal Humano TCDS: espectro de aceleración, sonar por eco y trayectoria GPS con índices causales.">
+  <style>
+    :root {
+      --bg: #050713;
+      --bg-alt: #0b0f1f;
+      --fg: #f5f7ff;
+      --accent: #35e0ff;
+      --accent2: #ff6bff;
+      --danger: #ff6b6b;
+      --ok: #4ade80;
+      --card-radius: 20px;
+      --shadow-soft: 0 20px 50px rgba(0,0,0,0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                   "SF Pro Text", "Roboto", "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #141b33 0%, #050713 45%, #01010a 100%);
+      color: var(--fg);
+      min-height: 100dvh;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .shell {
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ==================== RELOJ CAUSAL GRANDE ==================== */
+    .big-clock {
+      background: radial-gradient(circle at center, #182546 0%, #050713 70%);
+      border-radius: 32px;
+      padding: 24px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(255,255,255,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .big-clock svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .big-clock.ready {
+      box-shadow:
+        0 0 30px rgba(56,189,248,0.7),
+        0 0 80px rgba(59,130,246,0.9);
+    }
+
+    /* ==================== TARJETAS ==================== */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg-alt);
+      border-radius: var(--card-radius);
+      padding: 14px 16px 16px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.9;
+      margin-bottom: 8px;
+    }
+
+    .text-block {
+      font-size: 12.5px;
+      line-height: 1.55;
+      opacity: 0.88;
+      margin-bottom: 8px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent), #60a5ff);
+      color: #000;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .log {
+      margin-top: 6px;
+      padding: 7px 9px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.95);
+      font-size: 11px;
+      max-height: 120px;
+      overflow-y: auto;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      white-space: pre-wrap;
+    }
+
+    .log-line + .log-line {
+      margin-top: 2px;
+    }
+
+    /* ==================== ANIMACIONES ==================== */
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100% { opacity: 0.8; } 50% { opacity: 1; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- RELOJ CAUSAL GRANDE -->
+  <div class="big-clock" id="bigClock">
+    <svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00E5FF"/>
+          <stop offset="50%" stop-color="#40FF9C"/>
+          <stop offset="100%" stop-color="#FF00FF"/>
+        </linearGradient>
+        <linearGradient id="gradNeedle" x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stop-color="#35e0ff"/>
+          <stop offset="100%" stop-color="#ffffff"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Fondo -->
+      <circle cx="500" cy="400" r="380" fill="#0b0f1f"/>
+      <circle cx="500" cy="400" r="375" stroke="url(#gradRing)" stroke-width="10"
+              fill="none" opacity="0.7"/>
+
+      <!-- Dial giratorio lento -->
+      <g id="dialSpin" transform="translate(500,400)" style="animation: spin-slow 48s linear infinite;">
+        <circle r="340" fill="none" stroke="#40FF9C" stroke-width="2"
+                stroke-dasharray="8 16" opacity="0.4"/>
+        <circle r="300" fill="none" stroke="#35e0ff" stroke-width="1"
+                stroke-dasharray="4 12" opacity="0.3"/>
+      </g>
+
+      <!-- Escala y texto del espectro -->
+      <g id="freqScale">
+        <text x="500" y="70" fill="#9CA3AF" font-size="28" text-anchor="middle">
+          Espectro de aceleración
+        </text>
+        <text x="500" y="100" fill="#60a5ff" font-size="18"
+              text-anchor="middle" id="peakFreqText">
+          0.00 Hz
+        </text>
+      </g>
+
+      <!-- Aguja t_C principal (magnitud |a|) -->
+      <line id="tcNeedle" x1="500" y1="400" x2="500" y2="150"
+            stroke="url(#gradNeedle)" stroke-width="8"
+            stroke-linecap="round" transform="rotate(-60 500 400)"/>
+
+      <!-- Aguja rosa de frecuencia pico -->
+      <line id="freqNeedle" x1="500" y1="400" x2="500" y2="100"
+            stroke="#ff6bff" stroke-width="5" stroke-linecap="round"
+            opacity="0.9" filter="url(#glow)"/>
+
+      <!-- Centro -->
+      <circle cx="500" cy="400" r="20" fill="#00E5FF"/>
+      <circle cx="500" cy="400" r="12" fill="#020617"/>
+      <text x="500" y="415" fill="#E5E7EB" font-size="32"
+            text-anchor="middle" font-weight="bold">t_C</text>
+    </svg>
+  </div>
+
+  <!-- TARJETAS DE EXPERIMENTOS -->
+  <div class="cards-grid">
+
+    <!-- Espectro de aceleración -->
+    <div class="card">
+      <div class="card-title">Espectro de aceleración</div>
+      <div class="text-block">
+        Se calcula la FFT sobre las últimas
+        <strong id="fftN">512</strong> muestras de la aceleración total |a|.
+        La aguja rosa marca la frecuencia dominante actual.
+      </div>
+      <div class="text-block">
+        Resolución actual: <strong id="resLive">0.00</strong> Hz/bin<br>
+        Frecuencia dominante: <strong id="peakLive">0.00</strong> Hz<br>
+        Aceleración total: <strong id="magLive">0.00</strong> m/s²
+      </div>
+      <div class="text-block">
+        Número de muestras (N):<br/>
+        <select id="fftSizeSelect">
+          <option value="256">256 (rápido)</option>
+          <option value="512" selected>512 (equilibrado)</option>
+          <option value="1024">1024 (alta resolución)</option>
+          <option value="2048">2048 (máxima)</option>
+        </select>
+      </div>
+      <div class="text-block" style="font-size:11px; opacity:0.8;">
+        Activa el reloj moviendo ligeramente el teléfono tras el primer toque
+        en la pantalla (permiso de movimiento).
+      </div>
+    </div>
+
+    <!-- Sonar Causal -->
+    <div class="card" id="sonarCard">
+      <div class="card-title">Sonar Causal — Distancia por eco</div>
+      <div class="text-block">
+        Emite un breve <em>chirp</em> por el altavoz y escucha los ecos con el
+        micrófono para estimar la distancia al objeto más cercano que refleje el sonido.
+      </div>
+      <button class="btn" id="sonarBtn">Emitir ping y medir</button>
+      <div class="text-block" style="margin-top:10px;">
+        Distancia estimada: <strong id="sonarDistance">—</strong><br/>
+        Calidad del eco (coef. correlación): <strong id="sonarQuality">—</strong>
+      </div>
+      <div class="text-block" id="sonarStatus"
+           style="font-size:11px; opacity:0.8;">
+        Esperando primer ping…
+      </div>
+      <div class="log" id="sonarLog"></div>
+    </div>
+
+    <!-- Trayectoria GPS -->
+    <div class="card" id="gpsCard">
+      <div class="card-title">Trayectoria Causal — GPS</div>
+      <div class="text-block">
+        Usa la ubicación del dispositivo para construir una trayectoria:
+        posición, velocidad y un índice de coherencia de ruta
+        <strong>C_flow</strong> a partir de los últimos puntos GPS.
+      </div>
+      <button class="btn" id="gpsStartBtn">Iniciar medición GPS</button>
+      <div class="text-block" style="margin-top:10px;">
+        Latitud: <strong id="gpsLat">—</strong><br/>
+        Longitud: <strong id="gpsLon">—</strong><br/>
+        Altitud: <strong id="gpsAlt">—</strong><br/>
+        Precisión horizontal: <strong id="gpsAcc">—</strong><br/>
+        Velocidad: <strong id="gpsSpeed">—</strong><br/>
+        Rumbo: <strong id="gpsHeading">—</strong>
+      </div>
+      <div class="text-block" style="margin-top:8px;">
+        Desplazamiento neto: <strong id="gpsNetDist">—</strong><br/>
+        Longitud del camino: <strong id="gpsPathLen">—</strong><br/>
+        Índice C_flow: <strong id="gpsCflow">—</strong>
+      </div>
+      <div class="text-block" id="gpsStatus"
+           style="font-size:11px; opacity:0.8;">
+        Aún no se ha iniciado la medición GPS.
+      </div>
+      <div class="log" id="gpsLog"></div>
+    </div>
+
+  </div><!-- /cards-grid -->
+
+</div><!-- /shell -->
+
+<script>
+/* ================== RELOJ + FFT ACELERACIÓN ================== */
+const tcNeedle      = document.getElementById('tcNeedle');
+const freqNeedle    = document.getElementById('freqNeedle');
+const peakFreqText  = document.getElementById('peakFreqText');
+const fftSizeSelect = document.getElementById('fftSizeSelect');
+const fftNDisplay   = document.getElementById('fftN');
+const magLiveEl     = document.getElementById('magLive');
+const peakLiveEl    = document.getElementById('peakLive');
+const resLiveEl     = document.getElementById('resLive');
+const bigClock      = document.getElementById('bigClock');
+
+let accelBuffer = [];
+let N = 512;
+let sampleRate = 0;
+let lastTime = 0;
+
+function fft(real, imag) {
+  const n = real.length;
+  if (n <= 1) return;
+  let levels = -1;
+  for (let i = 0; i < 32; i++) if (1 << i === n) { levels = i; break; }
+  if (levels === -1) return;
+
+  // bit reversal
+  for (let i = 0; i < n; i++) {
+    let j = 0;
+    for (let k = 0; k < levels; k++) j = (j << 1) | ((i >> k) & 1);
+    if (j > i) {
+      [real[i], real[j]] = [real[j], real[i]];
+      [imag[i], imag[j]] = [imag[j], imag[i]];
+    }
+  }
+
+  for (let size = 2; size <= n; size <<= 1) {
+    const angle = -2 * Math.PI / size;
+    const wr = Math.cos(angle), wi = Math.sin(angle);
+    for (let i = 0; i < n; i += size) {
+      let wpr = 1, wpi = 0;
+      for (let j = 0; j < size / 2; j++) {
+        const k = i + j;
+        const l = k + size / 2;
+        const tr = real[l] * wpr - imag[l] * wpi;
+        const ti = real[l] * wpr + imag[l] * wpi;
+        real[l] = real[k] - tr;
+        imag[l] = imag[k] - ti;
+        real[k] += tr;
+        imag[k] += ti;
+        const tmp = wpr * wr - wpi * wi;
+        wpi = wpr * wi + wpi * wr;
+        wpr = tmp;
+      }
+    }
+  }
+}
+
+function computeSpectrum() {
+  if (accelBuffer.length < N || !sampleRate) return;
+
+  const slice = accelBuffer.slice(-N);
+  const mean = slice.reduce((a,b)=>a+b,0)/N;
+  const real = slice.map(v => v - mean);
+  const imag = new Array(N).fill(0);
+
+  fft(real, imag);
+
+  let maxMag = 0;
+  let peakBin = 0;
+  const half = N >>> 1;
+
+  for (let i = 1; i < half; i++) {
+    const mag = Math.hypot(real[i], imag[i]);
+    if (mag > maxMag) {
+      maxMag = mag;
+      peakBin = i;
+    }
+  }
+
+  const freqRes = sampleRate / N;
+  const peakFreq = peakBin * freqRes;
+
+  // aguja rosa (0–60 Hz → -150° a 150°)
+  const angle = (peakFreq / 60) * 300 - 150;
+  freqNeedle.setAttribute('transform', `rotate(${angle} 500 400)`);
+
+  peakFreqText.textContent = peakFreq.toFixed(2) + ' Hz';
+  peakLiveEl.textContent   = peakFreq.toFixed(2) + ' Hz';
+  resLiveEl.textContent    = freqRes.toFixed(3) + ' Hz/bin';
+}
+
+function handleMotion(e) {
+  const a = e.accelerationIncludingGravity;
+  if (!a) return;
+
+  const ax = a.x || 0;
+  const ay = a.y || 0;
+  const az = a.z || 0;
+  const mag = Math.hypot(ax, ay, az);
+
+  const now = performance.now();
+  if (lastTime > 0) {
+    const dt = (now - lastTime) / 1000;
+    if (dt > 0) sampleRate = 1 / dt;
+  }
+  lastTime = now;
+
+  // Aguja t_C (magnitud |a|)
+  const norm = Math.min(mag / 20, 1);
+  const tcAngle = -60 + norm * 120;
+  tcNeedle.setAttribute('transform', `rotate(${tcAngle} 500 400)`);
+
+  accelBuffer.push(mag);
+  if (accelBuffer.length > 4096) accelBuffer.shift();
+
+  magLiveEl.textContent = mag.toFixed(2);
+
+  computeSpectrum();
+}
+
+async function initMotion() {
+  try {
+    if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function') {
+      const perm = await DeviceMotionEvent.requestPermission();
+      if (perm !== 'granted') return;
+    }
+    window.addEventListener('devicemotion', handleMotion);
+    bigClock.classList.add('ready');
+  } catch (err) {
+    console.error('Error init motion:', err);
+  }
+}
+
+fftSizeSelect.addEventListener('change', (e) => {
+  N = parseInt(e.target.value, 10);
+  fftNDisplay.textContent = N;
+});
+
+/* ================== SONAR CAUSAL ================== */
+const SPEED_OF_SOUND = 340; // m/s
+
+let audioCtx = null;
+let micStream = null;
+let micSource = null;
+let processor = null;
+let chirpBuffer = null;
+let sonarInitialized = false;
+
+const sonarBtn        = document.getElementById('sonarBtn');
+const sonarStatusEl   = document.getElementById('sonarStatus');
+const sonarDistanceEl = document.getElementById('sonarDistance');
+const sonarQualityEl  = document.getElementById('sonarQuality');
+const sonarLogEl      = document.getElementById('sonarLog');
+
+async function initSonarAudio() {
+  if (sonarInitialized) return;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  micStream = stream;
+  micSource = audioCtx.createMediaStreamSource(stream);
+
+  processor = audioCtx.createScriptProcessor(1024, 1, 1);
+  micSource.connect(processor);
+  processor.connect(audioCtx.destination);
+
+  const duration = 0.02;
+  const sr = audioCtx.sampleRate;
+  const length = Math.floor(duration * sr);
+  chirpBuffer = audioCtx.createBuffer(1, length, sr);
+  const data = chirpBuffer.getChannelData(0);
+
+  const f0 = 3000, f1 = 8000;
+  const k = (f1 - f0) / duration;
+
+  for (let n = 0; n < length; n++) {
+    const t = n / sr;
+    const phase = 2 * Math.PI * (f0 * t + 0.5 * k * t * t);
+    const w = Math.sin(Math.PI * n / length);
+    data[n] = 0.5 * w * Math.sin(phase);
+  }
+
+  sonarInitialized = true;
+  if (sonarStatusEl) {
+    sonarStatusEl.textContent =
+      'Sonar listo. Apunta a una superficie dura y pulsa “Emitir ping y medir”.';
+  }
+}
+
+function playChirp() {
+  if (!audioCtx || !chirpBuffer) return;
+  const src = audioCtx.createBufferSource();
+  src.buffer = chirpBuffer;
+  src.connect(audioCtx.destination);
+  src.start();
+}
+
+function analyseSonar(samples, sr) {
+  if (!chirpBuffer) return;
+
+  const chirp = chirpBuffer.getChannelData(0);
+  const N = samples.length;
+  const M = chirp.length;
+
+  if (N <= M + 10) {
+    if (sonarStatusEl) {
+      sonarStatusEl.textContent = 'Se grabaron muy pocas muestras. Intenta de nuevo.';
+    }
+    return;
+  }
+
+  let maxS = 0;
+  for (let i = 0; i < N; i++) {
+    const v = Math.abs(samples[i]);
+    if (v > maxS) maxS = v;
+  }
+  if (maxS > 0) {
+    for (let i = 0; i < N; i++) samples[i] /= maxS;
+  }
+
+  let maxC = 0;
+  let bestLag = 0;
+  for (let lag = 0; lag < N - M; lag++) {
+    let c = 0;
+    for (let j = 0; j < M; j++) {
+      c += samples[lag + j] * chirp[j];
+    }
+    if (c > maxC) {
+      maxC = c;
+      bestLag = lag;
+    }
+  }
+
+  const dt = bestLag / sr;
+  const distance = 0.5 * SPEED_OF_SOUND * dt;
+
+  if (sonarDistanceEl) sonarDistanceEl.textContent = distance.toFixed(2) + ' m';
+  if (sonarQualityEl)  sonarQualityEl.textContent  = maxC.toFixed(3);
+  if (sonarStatusEl) {
+    sonarStatusEl.textContent =
+      'Medición completada. Repite el ping para ver estabilidad y ruido.';
+  }
+
+  if (sonarLogEl) {
+    const ts = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.textContent =
+      `[${ts}] d ≈ ${distance.toFixed(2)} m · coef = ${maxC.toFixed(3)}`;
+    sonarLogEl.prepend(line);
+    while (sonarLogEl.childNodes.length > 6) {
+      sonarLogEl.removeChild(sonarLogEl.lastChild);
+    }
+  }
+}
+
+function runOneSonarPing() {
+  return new Promise((resolve) => {
+    if (!audioCtx || !processor || !chirpBuffer) {
+      if (sonarStatusEl) sonarStatusEl.textContent = 'Audio no inicializado.';
+      return resolve();
+    }
+
+    const samples = [];
+    const sr = audioCtx.sampleRate;
+    const maxRecordTime = 0.25;
+    const maxSamples = Math.floor(maxRecordTime * sr);
+
+    const handleAudio = (event) => {
+      const input = event.inputBuffer.getChannelData(0);
+      for (let i = 0; i < input.length; i++) {
+        samples.push(input[i]);
+        if (samples.length >= maxSamples) break;
+      }
+      if (samples.length >= maxSamples) {
+        processor.removeEventListener('audioprocess', handleAudio);
+        analyseSonar(samples, sr);
+        resolve();
+      }
+    };
+
+    processor.addEventListener('audioprocess', handleAudio);
+    playChirp();
+
+    setTimeout(() => {
+      if (samples.length > 0) {
+        processor.removeEventListener('audioprocess', handleAudio);
+        analyseSonar(samples, sr);
+      }
+      resolve();
+    }, maxRecordTime * 1000 + 100);
+  });
+}
+
+if (sonarBtn) {
+  sonarBtn.addEventListener('click', async () => {
+    try {
+      if (!sonarInitialized) {
+        if (sonarStatusEl) {
+          sonarStatusEl.textContent =
+            'Inicializando audio… acepta el uso del micrófono cuando el navegador lo pida.';
+        }
+        await initSonarAudio();
+      }
+      if (sonarStatusEl) {
+        sonarStatusEl.textContent = 'Emitiendo ping y escuchando ecos…';
+      }
+      await runOneSonarPing();
+    } catch (err) {
+      console.error('Error en Sonar Causal:', err);
+      if (sonarStatusEl) {
+        sonarStatusEl.textContent =
+          'Error de audio o permisos. Revisa el navegador o recarga la página.';
+      }
+    }
+  });
+}
+
+/* ================== GPS CAUSAL ================== */
+const gpsStartBtn   = document.getElementById('gpsStartBtn');
+const gpsLatEl      = document.getElementById('gpsLat');
+const gpsLonEl      = document.getElementById('gpsLon');
+const gpsAltEl      = document.getElementById('gpsAlt');
+const gpsAccEl      = document.getElementById('gpsAcc');
+const gpsSpeedEl    = document.getElementById('gpsSpeed');
+const gpsHeadingEl  = document.getElementById('gpsHeading');
+const gpsNetDistEl  = document.getElementById('gpsNetDist');
+const gpsPathLenEl  = document.getElementById('gpsPathLen');
+const gpsCflowEl    = document.getElementById('gpsCflow');
+const gpsStatusEl   = document.getElementById('gpsStatus');
+const gpsLogEl      = document.getElementById('gpsLog');
+
+let gpsWatchId = null;
+let gpsPoints  = [];
+const GPS_MAX_POINTS = 100;
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function updateGpsMetrics() {
+  if (gpsPoints.length < 2) return;
+  const first = gpsPoints[0];
+  const last  = gpsPoints[gpsPoints.length - 1];
+  const netDist = haversine(first.lat, first.lon, last.lat, last.lon);
+
+  let pathLen = 0;
+  for (let i = 1; i < gpsPoints.length; i++) {
+    const a = gpsPoints[i - 1];
+    const b = gpsPoints[i];
+    pathLen += haversine(a.lat, a.lon, b.lat, b.lon);
+  }
+
+  const cFlow = pathLen > 0 ? netDist / pathLen : 0;
+
+  gpsNetDistEl.textContent = netDist.toFixed(1) + ' m';
+  gpsPathLenEl.textContent = pathLen.toFixed(1) + ' m';
+  gpsCflowEl.textContent   = cFlow.toFixed(3);
+}
+
+function handleGpsPosition(position) {
+  const c = position.coords;
+  const lat = c.latitude;
+  const lon = c.longitude;
+  const alt = c.altitude;
+  const acc = c.accuracy;
+  const speed = c.speed;
+  const heading = c.heading;
+  const t = position.timestamp;
+
+  gpsPoints.push({ lat, lon, t });
+  if (gpsPoints.length > GPS_MAX_POINTS) gpsPoints.shift();
+
+  gpsLatEl.textContent = lat.toFixed(6);
+  gpsLonEl.textContent = lon.toFixed(6);
+  gpsAltEl.textContent = (alt == null ? 'N/D' : alt.toFixed(1) + ' m');
+  gpsAccEl.textContent = acc.toFixed(1) + ' m';
+  gpsSpeedEl.textContent =
+    (speed == null ? 'N/D' : speed.toFixed(2) + ' m/s');
+  gpsHeadingEl.textContent =
+    (heading == null ? 'N/D' : heading.toFixed(1) + '°');
+
+  updateGpsMetrics();
+
+  if (gpsStatusEl) gpsStatusEl.textContent = 'Recibiendo datos GPS…';
+
+  if (gpsLogEl) {
+    const ts = new Date(t).toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.textContent =
+      `[${ts}] lat=${lat.toFixed(5)} lon=${lon.toFixed(5)} acc=${acc.toFixed(1)}m`;
+    gpsLogEl.prepend(line);
+    while (gpsLogEl.childNodes.length > 6) {
+      gpsLogEl.removeChild(gpsLogEl.lastChild);
+    }
+  }
+}
+
+function handleGpsError(err) {
+  console.error('GPS error:', err);
+  if (gpsStatusEl) gpsStatusEl.textContent = 'Error GPS: ' + err.message;
+}
+
+function startGpsTracking() {
+  if (!('geolocation' in navigator)) {
+    if (gpsStatusEl) gpsStatusEl.textContent =
+      'Este navegador no soporta geolocalización.';
+    return;
+  }
+  if (gpsWatchId != null) {
+    if (gpsStatusEl) gpsStatusEl.textContent = 'El GPS ya está activo.';
+    return;
+  }
+
+  gpsPoints = [];
+  gpsWatchId = navigator.geolocation.watchPosition(
+    handleGpsPosition,
+    handleGpsError,
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+  );
+
+  if (gpsStatusEl) {
+    gpsStatusEl.textContent =
+      'Solicitando ubicación… acepta el permiso de GPS si el navegador lo pide.';
+  }
+}
+
+if (gpsStartBtn) {
+  gpsStartBtn.addEventListener('click', startGpsTracking);
+}
+
+/* ================== ARRANQUE GLOBAL ================== */
+document.addEventListener('click', () => {
+  initMotion();
+}, { once: true });
+
+document.addEventListener('touchstart', () => {
+  initMotion();
+}, { once: true });
+</script>
+</body>
+</html>
