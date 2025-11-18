@@ -83,7 +83,6 @@
       from { transform: rotate(0deg); } 
       to   { transform: rotate(360deg); } 
     }
-    
   </style>
 </head>
 <body>
@@ -170,26 +169,7 @@
       <text x="500" y="490" fill="#9CA3AF" font-size="14" text-anchor="middle">
         Q · Σ = φ  ·  t_C(t) desde sensores del dispositivo
       </text>
-    </svg>
-  </div>
-
-  <div class="status-bar">
-    <div class="status-chip">
-      |a|: <span id="magLive">0.00</span> m/s²
-    </div>
-    <div class="status-chip">
-      t_C (aguja cian): <span id="tcAngleLive">-60.0</span>°
-    </div>
-    <div class="status-chip">
-      f_dom (aguja magenta): <span id="peakLive">0.00</span> Hz
-    </div>
-    <div class="status-chip">
-      Resolución FFT: <span id="resLive">0.00</span> Hz/bin
-    </div>
-  </div>
-
-</div>
-<!-- TRAYECTORIA CAUSAL (GPS) -->
+      <!-- TRAYECTORIA CAUSAL (GPS) -->
 <div class="card" id="gpsCard">
   <div class="card-title">Trayectoria Causal — GPS</div>
 
@@ -224,6 +204,26 @@
     <!-- Aquí se verán las últimas actualizaciones de posición -->
   </div>
 </div>
+    </svg>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-chip">
+      |a|: <span id="magLive">0.00</span> m/s²
+    </div>
+    <div class="status-chip">
+      t_C (aguja cian): <span id="tcAngleLive">-60.0</span>°
+    </div>
+    <div class="status-chip">
+      f_dom (aguja magenta): <span id="peakLive">0.00</span> Hz
+    </div>
+    <div class="status-chip">
+      Resolución FFT: <span id="resLive">0.00</span> Hz/bin
+    </div>
+  </div>
+
+</div>
+
 <script>
   // ==== Elementos clave ====
   const bigClock     = document.getElementById('bigClock');
@@ -378,8 +378,7 @@
 
   // Primer toque → activación
   document.body.addEventListener('click', initReloj,   { once: true });
-  document.body.addEventListener('touchstart', initReloj, { once: true });
-<script>
+  <script>
 // ================== SONAR CAUSAL — DISTANCIA POR ECO ==================
 const SPEED_OF_SOUND = 340; // m/s aprox.
 
@@ -436,157 +435,7 @@ async function initSonarAudio() {
   sonarInitialized = true;
   if (sonarStatusEl) {
     sonarStatusEl.textContent =
-      'Sonar listo. Apunta a una superficie dura y pulsa “Emitir ping y medir”.';
-  }
-}
-
-// 2) Reproducir chirp por el altavoz
-function playChirp() {
-  if (!audioCtx || !chirpBuffer) return;
-  const src = audioCtx.createBufferSource();
-  src.buffer = chirpBuffer;
-  src.connect(audioCtx.destination);
-  src.start();
-}
-
-// 3) Un ciclo completo: emitir ping + capturar + analizar
-function runOneSonarPing() {
-  return new Promise((resolve) => {
-    if (!audioCtx || !processor || !chirpBuffer) {
-      if (sonarStatusEl) sonarStatusEl.textContent = 'Audio no inicializado.';
-      return resolve();
-    }
-
-    const samples = [];
-    const sr = audioCtx.sampleRate;
-
-    const maxRecordTime = 0.25; // 250 ms de escucha
-    const maxSamples = Math.floor(maxRecordTime * sr);
-
-    const handleAudio = (event) => {
-      const input = event.inputBuffer.getChannelData(0);
-      for (let i = 0; i < input.length; i++) {
-        samples.push(input[i]);
-        if (samples.length >= maxSamples) break;
-      }
-
-      if (samples.length >= maxSamples) {
-        processor.removeEventListener('audioprocess', handleAudio);
-        analyseSonar(samples, sr);
-        resolve();
-      }
-    };
-
-    processor.addEventListener('audioprocess', handleAudio);
-
-    // Emitimos el ping justo antes / mientras grabamos
-    playChirp();
-
-    // Por seguridad, timeout
-    setTimeout(() => {
-      if (samples.length > 0) {
-        processor.removeEventListener('audioprocess', handleAudio);
-        analyseSonar(samples, sr);
-      }
-      resolve();
-    }, (maxRecordTime * 1000) + 100);
-  });
-}
-
-// 4) Análisis: correlación chirp vs señal grabada → tiempo de eco → distancia
-function analyseSonar(samples, sr) {
-  if (!chirpBuffer) return;
-
-  const chirp = chirpBuffer.getChannelData(0);
-  const N = samples.length;
-  const M = chirp.length;
-
-  if (N <= M + 10) {
-    if (sonarStatusEl) {
-      sonarStatusEl.textContent = 'Se grabaron muy pocas muestras. Intenta de nuevo.';
-    }
-    return;
-  }
-
-  // Normalización básica
-  let maxS = 0;
-  for (let i = 0; i < N; i++) {
-    const v = Math.abs(samples[i]);
-    if (v > maxS) maxS = v;
-  }
-  if (maxS > 0) {
-    for (let i = 0; i < N; i++) samples[i] /= maxS;
-  }
-
-  // Correlación discreta (sencilla, no FFT) entre señal y chirp
-  let maxC = 0;
-  let bestLag = 0;
-  for (let lag = 0; lag < N - M; lag++) {
-    let c = 0;
-    for (let j = 0; j < M; j++) {
-      c += samples[lag + j] * chirp[j];
-    }
-    if (c > maxC) {
-      maxC = c;
-      bestLag = lag;
-    }
-  }
-
-  const dt = bestLag / sr; // segundos de retardo
-  const distance = 0.5 * SPEED_OF_SOUND * dt; // ida y vuelta → /2
-
-  if (sonarDistanceEl) {
-    sonarDistanceEl.textContent = distance.toFixed(2) + ' m';
-  }
-  if (sonarQualityEl) {
-    sonarQualityEl.textContent = maxC.toFixed(3);
-  }
-  if (sonarStatusEl) {
-    sonarStatusEl.textContent =
-      'Medición completada. Repite el ping para ver estabilidad y ruido.';
-  }
-
-  // Log de últimas mediciones
-  if (sonarLogEl) {
-    const ts = new Date().toLocaleTimeString();
-    const line = document.createElement('div');
-    line.className = 'log-line';
-    line.textContent =
-      `[${ts}] d ≈ ${distance.toFixed(2)} m · coef = ${maxC.toFixed(3)}`;
-    sonarLogEl.prepend(line);
-
-    // Mantener solo las últimas 6 líneas
-    while (sonarLogEl.childNodes.length > 6) {
-      sonarLogEl.removeChild(sonarLogEl.lastChild);
-    }
-  }
-}
-
-// 5) Click en el botón: inicializar si hace falta y lanzar un ping
-if (sonarBtn) {
-  sonarBtn.addEventListener('click', async () => {
-    try {
-      if (!sonarInitialized) {
-        if (sonarStatusEl) {
-          sonarStatusEl.textContent =
-            'Inicializando audio… acepta el uso del micrófono cuando el navegador lo pida.';
-        }
-        await initSonarAudio();
-      }
-      if (sonarStatusEl) {
-        sonarStatusEl.textContent = 'Emitiendo ping y escuchando ecos…';
-      }
-      await runOneSonarPing();
-    } catch (err) {
-      console.error('Error en Sonar Causal:', err);
-      if (sonarStatusEl) {
-        sonarStatusEl.textContent =
-          'Error de audio o permisos. Revisa el navegador o recarga la página.';
-      }
-    }
-  });
-}
-</script>
+      'Sonar listo. Apunta a una superficie dura ydocument.body.addEventListener('touchstart', initReloj, { once: true });
 </script>
 </body>
 </html>
