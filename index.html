@@ -728,6 +728,21 @@ if (gpsStartBtn) {
 /* ================== ARRANQUE GLOBAL ================== */
 document.addEventListener('click', () => {
   initMotion();
+
+setInterval(() => {
+  const payload = {
+    device_id: crypto.randomUUID(),
+    timestamp: Date.now(),
+    t_C: current_tC,
+    LI: current_LI,
+    R: current_R,
+    ΔH: current_entropy,
+    C_flow: current_Cflow,
+    battery: batteryInfo.level
+  };
+  sendSigmaMetrics(payload);
+}, 60000);
+
 }, { once: true });
 
 document.addEventListener('touchstart', () => {
