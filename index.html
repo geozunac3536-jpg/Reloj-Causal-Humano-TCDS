@@ -87,6 +87,30 @@
 </head>
 <body>
 <div class="shell">
+<div class="card" id="sonarCard">
+  <div class="card-title">Sonar Causal — Distancia por eco</div>
+
+  <div class="text-block">
+    Este experimento emite un breve <em>chirp</em> por el altavoz del teléfono
+    y escucha los ecos con el micrófono para estimar la distancia al objeto
+    más cercano que refleje el sonido.
+  </div>
+
+  <button class="btn" id="sonarBtn">Emitir ping y medir</button>
+
+  <div class="text-block" style="margin-top:10px;">
+    Distancia estimada: <strong id="sonarDistance">—</strong><br>
+    Calidad del eco (coef. correlación): <strong id="sonarQuality">—</strong>
+  </div>
+
+  <div class="text-block" id="sonarStatus" style="font-size:11px; opacity:0.8;">
+    Esperando primer ping…
+  </div>
+
+  <div class="log" id="sonarLog" style="margin-top:8px; max-height:120px;">
+    <!-- Aquí se irán apilando las últimas mediciones -->
+  </div>
+</div>
 
   <div class="big-clock" id="bigClock">
     <svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
