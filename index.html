@@ -214,6 +214,214 @@
 </div>
 
 <script>
+  <script>
+// ================== SONAR CAUSAL — DISTANCIA POR ECO ==================
+const SPEED_OF_SOUND = 340; // m/s aprox.
+
+let audioCtx = null;
+let micStream = null;
+let micSource = null;
+let processor = null;
+let chirpBuffer = null;
+let sonarInitialized = false;
+
+// Elementos de UI
+const sonarBtn        = document.getElementById('sonarBtn');
+const sonarStatusEl   = document.getElementById('sonarStatus');
+const sonarDistanceEl = document.getElementById('sonarDistance');
+const sonarQualityEl  = document.getElementById('sonarQuality');
+const sonarLogEl      = document.getElementById('sonarLog');
+
+// 1) Inicializar audio + micrófono + chirp
+async function initSonarAudio() {
+  if (sonarInitialized) return;
+
+  // Contexto de audio
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Permiso de micrófono
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  micStream = stream;
+  micSource = audioCtx.createMediaStreamSource(stream);
+
+  // Nodo procesador (captura muestras de audio del micrófono)
+  processor = audioCtx.createScriptProcessor(1024, 1, 1);
+  micSource.connect(processor);
+  processor.connect(audioCtx.destination);
+
+  // Crear chirp corto (~20 ms) de 3 kHz a 8 kHz
+  const duration = 0.02; // segundos
+  const sr = audioCtx.sampleRate;
+  const length = Math.floor(duration * sr);
+  chirpBuffer = audioCtx.createBuffer(1, length, sr);
+  const data = chirpBuffer.getChannelData(0);
+
+  const f0 = 3000; // Hz
+  const f1 = 8000; // Hz
+  const k = (f1 - f0) / duration;
+
+  for (let n = 0; n < length; n++) {
+    const t = n / sr;
+    const phase = 2 * Math.PI * (f0 * t + 0.5 * k * t * t);
+    // Ventana suave para evitar clics
+    const w = Math.sin(Math.PI * n / length);
+    data[n] = 0.5 * w * Math.sin(phase);
+  }
+
+  sonarInitialized = true;
+  if (sonarStatusEl) {
+    sonarStatusEl.textContent =
+      'Sonar listo. Apunta a una superficie dura y pulsa “Emitir ping y medir”.';
+  }
+}
+
+// 2) Reproducir chirp por el altavoz
+function playChirp() {
+  if (!audioCtx || !chirpBuffer) return;
+  const src = audioCtx.createBufferSource();
+  src.buffer = chirpBuffer;
+  src.connect(audioCtx.destination);
+  src.start();
+}
+
+// 3) Un ciclo completo: emitir ping + capturar + analizar
+function runOneSonarPing() {
+  return new Promise((resolve) => {
+    if (!audioCtx || !processor || !chirpBuffer) {
+      if (sonarStatusEl) sonarStatusEl.textContent = 'Audio no inicializado.';
+      return resolve();
+    }
+
+    const samples = [];
+    const sr = audioCtx.sampleRate;
+
+    const maxRecordTime = 0.25; // 250 ms de escucha
+    const maxSamples = Math.floor(maxRecordTime * sr);
+
+    const handleAudio = (event) => {
+      const input = event.inputBuffer.getChannelData(0);
+      for (let i = 0; i < input.length; i++) {
+        samples.push(input[i]);
+        if (samples.length >= maxSamples) break;
+      }
+
+      if (samples.length >= maxSamples) {
+        processor.removeEventListener('audioprocess', handleAudio);
+        analyseSonar(samples, sr);
+        resolve();
+      }
+    };
+
+    processor.addEventListener('audioprocess', handleAudio);
+
+    // Emitimos el ping justo antes / mientras grabamos
+    playChirp();
+
+    // Por seguridad, timeout
+    setTimeout(() => {
+      if (samples.length > 0) {
+        processor.removeEventListener('audioprocess', handleAudio);
+        analyseSonar(samples, sr);
+      }
+      resolve();
+    }, (maxRecordTime * 1000) + 100);
+  });
+}
+
+// 4) Análisis: correlación chirp vs señal grabada → tiempo de eco → distancia
+function analyseSonar(samples, sr) {
+  if (!chirpBuffer) return;
+
+  const chirp = chirpBuffer.getChannelData(0);
+  const N = samples.length;
+  const M = chirp.length;
+
+  if (N <= M + 10) {
+    if (sonarStatusEl) {
+      sonarStatusEl.textContent = 'Se grabaron muy pocas muestras. Intenta de nuevo.';
+    }
+    return;
+  }
+
+  // Normalización básica
+  let maxS = 0;
+  for (let i = 0; i < N; i++) {
+    const v = Math.abs(samples[i]);
+    if (v > maxS) maxS = v;
+  }
+  if (maxS > 0) {
+    for (let i = 0; i < N; i++) samples[i] /= maxS;
+  }
+
+  // Correlación discreta (sencilla, no FFT) entre señal y chirp
+  let maxC = 0;
+  let bestLag = 0;
+  for (let lag = 0; lag < N - M; lag++) {
+    let c = 0;
+    for (let j = 0; j < M; j++) {
+      c += samples[lag + j] * chirp[j];
+    }
+    if (c > maxC) {
+      maxC = c;
+      bestLag = lag;
+    }
+  }
+
+  const dt = bestLag / sr; // segundos de retardo
+  const distance = 0.5 * SPEED_OF_SOUND * dt; // ida y vuelta → /2
+
+  if (sonarDistanceEl) {
+    sonarDistanceEl.textContent = distance.toFixed(2) + ' m';
+  }
+  if (sonarQualityEl) {
+    sonarQualityEl.textContent = maxC.toFixed(3);
+  }
+  if (sonarStatusEl) {
+    sonarStatusEl.textContent =
+      'Medición completada. Repite el ping para ver estabilidad y ruido.';
+  }
+
+  // Log de últimas mediciones
+  if (sonarLogEl) {
+    const ts = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.textContent =
+      `[${ts}] d ≈ ${distance.toFixed(2)} m · coef = ${maxC.toFixed(3)}`;
+    sonarLogEl.prepend(line);
+
+    // Mantener solo las últimas 6 líneas
+    while (sonarLogEl.childNodes.length > 6) {
+      sonarLogEl.removeChild(sonarLogEl.lastChild);
+    }
+  }
+}
+
+// 5) Click en el botón: inicializar si hace falta y lanzar un ping
+if (sonarBtn) {
+  sonarBtn.addEventListener('click', async () => {
+    try {
+      if (!sonarInitialized) {
+        if (sonarStatusEl) {
+          sonarStatusEl.textContent =
+            'Inicializando audio… acepta el uso del micrófono cuando el navegador lo pida.';
+        }
+        await initSonarAudio();
+      }
+      if (sonarStatusEl) {
+        sonarStatusEl.textContent = 'Emitiendo ping y escuchando ecos…';
+      }
+      await runOneSonarPing();
+    } catch (err) {
+      console.error('Error en Sonar Causal:', err);
+      if (sonarStatusEl) {
+        sonarStatusEl.textContent =
+          'Error de audio o permisos. Revisa el navegador o recarga la página.';
+      }
+    }
+  });
+}
+</script>
   // ==== Elementos clave ====
   const bigClock     = document.getElementById('bigClock');
   const tcNeedle     = document.getElementById('tcNeedle');
