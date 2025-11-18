@@ -201,7 +201,32 @@
             text-anchor="middle" font-weight="bold">t_C</text>
     </svg>
   </div>
-
+<div class="card" id="causalStateCard">
+  <div class="card-title">Estado causal actual</div>
+  <div id="causalStateBadge" style="
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+    background:rgba(148,163,184,0.15);
+    border:1px solid rgba(148,163,184,0.5);
+  ">
+    <span id="causalStateDot" style="
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:#9ca3af;
+      box-shadow:0 0 8px rgba(156,163,175,0.8);
+    "></span>
+    <span id="causalStateLabel">Esperando datos…</span>
+  </div>
+  <p id="causalStateText" style="margin-top:8px;font-size:12px;opacity:0.85;">
+    Mantén el teléfono quieto unos segundos para calibrar el reloj.
+  </p>
+</div>
   <!-- TARJETAS DE EXPERIMENTOS -->
   <div class="cards-grid">
 
