@@ -784,7 +784,55 @@ setInterval(() => {
 document.addEventListener('touchstart', () => {
   initMotion();
 }, { once: true });
+// Variables que ya deberías tener calculadas en tu reloj:
+let current_tC   = 0;
+let current_LI   = 0;
+let current_R    = 0;
+let current_dH   = 0;
+let current_aMag = 0; // magnitud de aceleración |a|
 
+const causalStateDot   = document.getElementById('causalStateDot');
+const causalStateLabel = document.getElementById('causalStateLabel');
+const causalStateText  = document.getElementById('causalStateText');
+
+function updateCausalState() {
+  if (!causalStateDot || !causalStateLabel || !causalStateText) return;
+
+  // Reglas TCDS simplificadas
+  const entropy_ok = current_dH <= -0.2;
+  const locking_ok = current_LI >= 0.9 && current_R > 0.95;
+  const strongMotion = current_aMag > 3.0; // umbral arbitrario de “agitación”
+
+  let mode = 'baseline';
+
+  if (locking_ok && entropy_ok) {
+    mode = 'ventana_q';
+  } else if (strongMotion || current_dH >= 0) {
+    mode = 'ruido';
+  } else {
+    mode = 'baseline';
+  }
+
+  if (mode === 'baseline') {
+    causalStateDot.style.background = '#9ca3af';
+    causalStateDot.style.boxShadow  = '0 0 8px rgba(156,163,175,0.9)';
+    causalStateLabel.textContent    = 'Baseline φ-driven';
+    causalStateText.textContent     =
+      'El reloj está midiendo fricción / ruido de fondo. Útil como línea base antes de buscar coherencia.';
+  } else if (mode === 'ruido') {
+    causalStateDot.style.background = '#f97316';
+    causalStateDot.style.boxShadow  = '0 0 10px rgba(249,115,22,0.9)';
+    causalStateLabel.textContent    = 'Movimiento entrópico';
+    causalStateText.textContent     =
+      'El sistema está en fuerte agitación o con entropía creciente (ΔH ≥ 0). Es poco probable que aquí haya locking estable.';
+  } else if (mode === 'ventana_q') {
+    causalStateDot.style.background = '#22c55e';
+    causalStateDot.style.boxShadow  = '0 0 12px rgba(34,197,94,0.9)';
+    causalStateLabel.textContent    = 'Ventana candidata Q-driven';
+    causalStateText.textContent     =
+      'Los indicadores sugieren una ventana coherencial (locking_ok & ΔH ≤ -0.2). Este tramo es candidato para análisis más fino.';
+  }
+}
 </script>
 </body>
 </html>
