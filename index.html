@@ -728,6 +728,17 @@ if (gpsStartBtn) {
 /* ================== ARRANQUE GLOBAL ================== */
 document.addEventListener('click', () => {
   initMotion();
+async function sendSigmaMetrics(payload) {
+  try {
+    await fetch('https://tcds-network.vercel.app/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    console.error('Error enviando Σ-metrics:', err);
+  }
+}
 
 setInterval(() => {
   const payload = {
@@ -748,6 +759,7 @@ setInterval(() => {
 document.addEventListener('touchstart', () => {
   initMotion();
 }, { once: true });
+
 </script>
 </body>
 </html>
