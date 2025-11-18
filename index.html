@@ -87,31 +87,7 @@
 </head>
 <body>
 <div class="shell">
-<!-- SONAR CAUSAL — DISTANCIA POR ECO -->
-<div class="card" id="sonarCard">
-  <div class="card-title">Sonar Causal — Distancia por eco</div>
 
-  <div class="text-block">
-    Este experimento emite un breve <em>chirp</em> por el altavoz del teléfono
-    y escucha los ecos con el micrófono para estimar la distancia al objeto
-    más cercano que refleje el sonido.
-  </div>
-
-  <button class="btn" id="sonarBtn">Emitir ping y medir</button>
-
-  <div class="text-block" style="margin-top:10px;">
-    Distancia estimada: <strong id="sonarDistance">—</strong><br>
-    Calidad del eco (coef. correlación): <strong id="sonarQuality">—</strong>
-  </div>
-
-  <div class="text-block" id="sonarStatus" style="font-size:11px; opacity:0.8;">
-    Esperando primer ping…
-  </div>
-
-  <div class="log" id="sonarLog" style="margin-top:8px; max-height:120px;">
-    <!-- Aquí se irán apilando las últimas mediciones -->
-  </div>
-</div>
   <div class="big-clock" id="bigClock">
     <svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -160,7 +136,31 @@
           <line x1="732" y1="531" x2="708" y2="507"/>
         </g>
       </g>
+         <!-- SONAR CAUSAL — DISTANCIA POR ECO -->
+<div class="card" id="sonarCard">
+  <div class="card-title">Sonar Causal — Distancia por eco</div>
 
+  <div class="text-block">
+    Este experimento emite un breve <em>chirp</em> por el altavoz del teléfono
+    y escucha los ecos con el micrófono para estimar la distancia al objeto
+    más cercano que refleje el sonido.
+  </div>
+
+  <button class="btn" id="sonarBtn">Emitir ping y medir</button>
+
+  <div class="text-block" style="margin-top:10px;">
+    Distancia estimada: <strong id="sonarDistance">—</strong><br>
+    Calidad del eco (coef. correlación): <strong id="sonarQuality">—</strong>
+  </div>
+
+  <div class="text-block" id="sonarStatus" style="font-size:11px; opacity:0.8;">
+    Esperando primer ping…
+  </div>
+
+  <div class="log" id="sonarLog" style="margin-top:8px; max-height:120px;">
+    <!-- Aquí se irán apilando las últimas mediciones -->
+  </div>
+</div>
       <!-- Escala de frecuencia (misma corona, lectura para aguja magenta) -->
       <g id="scaleF">
         <text x="500" y="140" fill="#9CA3AF" font-size="18" text-anchor="middle">f_dom(|a|) [Hz]</text>
@@ -214,7 +214,161 @@
 </div>
 
 <script>
-  <script>
+  // ==== Elementos clave ====
+  const bigClock     = document.getElementById('bigClock');
+  const tcNeedle     = document.getElementById('tcNeedle');
+  const freqNeedle   = document.getElementById('freqNeedle');
+
+  const magLiveEl    = document.getElementById('magLive');
+  const tcAngleEl    = document.getElementById('tcAngleLive');
+  const peakLiveEl   = document.getElementById('peakLive');
+  const resLiveEl    = document.getElementById('resLive');
+
+  // ==== Buffers para FFT sobre |a| ====
+  let accelBuffer = [];
+  let lastTime    = 0;
+  let sampleRate  = 0;
+  let N           = 512;  // tamaño de ventana FFT (potencia de 2)
+
+  // FFT radix-2 simple
+  function fft(real, imag) {
+    const n = real.length;
+    if (n <= 1) return;
+
+    let levels = -1;
+    for (let i = 0; i < 32; i++) {
+      if (1 << i === n) { levels = i; break; }
+    }
+    if (levels < 0) return;
+
+    // bit reversal
+    for (let i = 0; i < n; i++) {
+      let j = 0;
+      for (let k = 0; k < levels; k++) {
+        j = (j << 1) | ((i >> k) & 1);
+      }
+      if (j > i) {
+        [real[i], real[j]] = [real[j], real[i]];
+        [imag[i], imag[j]] = [imag[j], imag[i]];
+      }
+    }
+
+    // Cooley–Tukey
+    for (let size = 2; size <= n; size <<= 1) {
+      const half = size >> 1;
+      const step = -2 * Math.PI / size;
+      for (let i = 0; i < n; i += size) {
+        let wr = 1, wi = 0;
+        for (let j = 0; j < half; j++) {
+          const k = i + j;
+          const l = k + half;
+
+          const tr = real[l] * wr - imag[l] * wi;
+          const ti = real[l] * wr + imag[l] * wi;
+
+          real[l] = real[k] - tr;
+          imag[l] = imag[k] - ti;
+          real[k] += tr;
+          imag[k] += ti;
+
+          const tmp = wr * Math.cos(step) - wi * Math.sin(step);
+          wi = wr * Math.sin(step) + wi * Math.cos(step);
+          wr = tmp;
+        }
+      }
+    }
+  }
+
+  function computeSpectrum() {
+    if (accelBuffer.length < N || sampleRate <= 0) return;
+
+    const slice = accelBuffer.slice(-N);
+    const mean  = slice.reduce((a,b)=>a+b,0) / N;
+    const real  = slice.map(v => v - mean);
+    const imag  = new Array(N).fill(0);
+
+    fft(real, imag);
+
+    const half = N >> 1;
+    let maxMag = 0;
+    let peakBin = 0;
+
+    for (let i = 1; i < half; i++) {
+      const mag = Math.hypot(real[i], imag[i]);
+      if (mag > maxMag) {
+        maxMag = mag;
+        peakBin = i;
+      }
+    }
+
+    const fRes   = sampleRate / N;
+    const fPeak  = peakBin * fRes;
+    const fNyq   = sampleRate / 2;
+
+    // Mapeo 0–fNyq → -150° a +150° (aguja magenta)
+    const clamped = Math.max(0, Math.min(fPeak, fNyq));
+    const frac    = fNyq > 0 ? clamped / fNyq : 0;
+    const angleF  = -150 + 300 * frac;
+
+    freqNeedle.setAttribute('transform', `rotate(${angleF} 500 400)`);
+
+    peakLiveEl.textContent = fPeak.toFixed(2) + ' Hz';
+    resLiveEl.textContent  = fRes.toFixed(3) + ' Hz/bin';
+  }
+
+  function handleMotion(e) {
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+
+    const ax = a.x || 0;
+    const ay = a.y || 0;
+    const az = a.z || 0;
+    const mag = Math.hypot(ax, ay, az);  // |a|
+
+    const now = performance.now();
+    if (lastTime > 0) {
+      const dt = (now - lastTime) / 1000;
+      if (dt > 0) sampleRate = 1 / dt;
+    }
+    lastTime = now;
+
+    // t_C: mapeo simple 0–20 m/s² → -60° a +60°
+    const maxG = 20;
+    const norm = Math.max(0, Math.min(mag / maxG, 1));
+    const angleTC = -60 + norm * 120;
+
+    tcNeedle.setAttribute('transform', `rotate(${angleTC} 500 400)`);
+
+    accelBuffer.push(mag);
+    if (accelBuffer.length > 4096) accelBuffer.shift();
+
+    magLiveEl.textContent = mag.toFixed(2);
+    tcAngleEl.textContent = angleTC.toFixed(1);
+
+    computeSpectrum();
+  }
+
+  async function initReloj() {
+    try {
+      if (typeof DeviceMotionEvent !== 'undefined' &&
+          typeof DeviceMotionEvent.requestPermission === 'function') {
+        const res = await DeviceMotionEvent.requestPermission();
+        if (res !== 'granted') {
+          alert('Permiso de movimiento denegado. El reloj no podrá leer t_C.');
+          return;
+        }
+      }
+      window.addEventListener('devicemotion', handleMotion);
+      bigClock.classList.add('ready');
+    } catch (err) {
+      console.error('Error iniciando Reloj Causal:', err);
+    }
+  }
+
+  // Primer toque → activación
+  document.body.addEventListener('click', initReloj,   { once: true });
+  document.body.addEventListener('touchstart', initReloj, { once: true });
+<script>
 // ================== SONAR CAUSAL — DISTANCIA POR ECO ==================
 const SPEED_OF_SOUND = 340; // m/s aprox.
 
@@ -421,161 +575,6 @@ if (sonarBtn) {
     }
   });
 }
-</script>
-  // ==== Elementos clave ====
-  const bigClock     = document.getElementById('bigClock');
-  const tcNeedle     = document.getElementById('tcNeedle');
-  const freqNeedle   = document.getElementById('freqNeedle');
-
-  const magLiveEl    = document.getElementById('magLive');
-  const tcAngleEl    = document.getElementById('tcAngleLive');
-  const peakLiveEl   = document.getElementById('peakLive');
-  const resLiveEl    = document.getElementById('resLive');
-
-  // ==== Buffers para FFT sobre |a| ====
-  let accelBuffer = [];
-  let lastTime    = 0;
-  let sampleRate  = 0;
-  let N           = 512;  // tamaño de ventana FFT (potencia de 2)
-
-  // FFT radix-2 simple
-  function fft(real, imag) {
-    const n = real.length;
-    if (n <= 1) return;
-
-    let levels = -1;
-    for (let i = 0; i < 32; i++) {
-      if (1 << i === n) { levels = i; break; }
-    }
-    if (levels < 0) return;
-
-    // bit reversal
-    for (let i = 0; i < n; i++) {
-      let j = 0;
-      for (let k = 0; k < levels; k++) {
-        j = (j << 1) | ((i >> k) & 1);
-      }
-      if (j > i) {
-        [real[i], real[j]] = [real[j], real[i]];
-        [imag[i], imag[j]] = [imag[j], imag[i]];
-      }
-    }
-
-    // Cooley–Tukey
-    for (let size = 2; size <= n; size <<= 1) {
-      const half = size >> 1;
-      const step = -2 * Math.PI / size;
-      for (let i = 0; i < n; i += size) {
-        let wr = 1, wi = 0;
-        for (let j = 0; j < half; j++) {
-          const k = i + j;
-          const l = k + half;
-
-          const tr = real[l] * wr - imag[l] * wi;
-          const ti = real[l] * wr + imag[l] * wi;
-
-          real[l] = real[k] - tr;
-          imag[l] = imag[k] - ti;
-          real[k] += tr;
-          imag[k] += ti;
-
-          const tmp = wr * Math.cos(step) - wi * Math.sin(step);
-          wi = wr * Math.sin(step) + wi * Math.cos(step);
-          wr = tmp;
-        }
-      }
-    }
-  }
-
-  function computeSpectrum() {
-    if (accelBuffer.length < N || sampleRate <= 0) return;
-
-    const slice = accelBuffer.slice(-N);
-    const mean  = slice.reduce((a,b)=>a+b,0) / N;
-    const real  = slice.map(v => v - mean);
-    const imag  = new Array(N).fill(0);
-
-    fft(real, imag);
-
-    const half = N >> 1;
-    let maxMag = 0;
-    let peakBin = 0;
-
-    for (let i = 1; i < half; i++) {
-      const mag = Math.hypot(real[i], imag[i]);
-      if (mag > maxMag) {
-        maxMag = mag;
-        peakBin = i;
-      }
-    }
-
-    const fRes   = sampleRate / N;
-    const fPeak  = peakBin * fRes;
-    const fNyq   = sampleRate / 2;
-
-    // Mapeo 0–fNyq → -150° a +150° (aguja magenta)
-    const clamped = Math.max(0, Math.min(fPeak, fNyq));
-    const frac    = fNyq > 0 ? clamped / fNyq : 0;
-    const angleF  = -150 + 300 * frac;
-
-    freqNeedle.setAttribute('transform', `rotate(${angleF} 500 400)`);
-
-    peakLiveEl.textContent = fPeak.toFixed(2) + ' Hz';
-    resLiveEl.textContent  = fRes.toFixed(3) + ' Hz/bin';
-  }
-
-  function handleMotion(e) {
-    const a = e.accelerationIncludingGravity;
-    if (!a) return;
-
-    const ax = a.x || 0;
-    const ay = a.y || 0;
-    const az = a.z || 0;
-    const mag = Math.hypot(ax, ay, az);  // |a|
-
-    const now = performance.now();
-    if (lastTime > 0) {
-      const dt = (now - lastTime) / 1000;
-      if (dt > 0) sampleRate = 1 / dt;
-    }
-    lastTime = now;
-
-    // t_C: mapeo simple 0–20 m/s² → -60° a +60°
-    const maxG = 20;
-    const norm = Math.max(0, Math.min(mag / maxG, 1));
-    const angleTC = -60 + norm * 120;
-
-    tcNeedle.setAttribute('transform', `rotate(${angleTC} 500 400)`);
-
-    accelBuffer.push(mag);
-    if (accelBuffer.length > 4096) accelBuffer.shift();
-
-    magLiveEl.textContent = mag.toFixed(2);
-    tcAngleEl.textContent = angleTC.toFixed(1);
-
-    computeSpectrum();
-  }
-
-  async function initReloj() {
-    try {
-      if (typeof DeviceMotionEvent !== 'undefined' &&
-          typeof DeviceMotionEvent.requestPermission === 'function') {
-        const res = await DeviceMotionEvent.requestPermission();
-        if (res !== 'granted') {
-          alert('Permiso de movimiento denegado. El reloj no podrá leer t_C.');
-          return;
-        }
-      }
-      window.addEventListener('devicemotion', handleMotion);
-      bigClock.classList.add('ready');
-    } catch (err) {
-      console.error('Error iniciando Reloj Causal:', err);
-    }
-  }
-
-  // Primer toque → activación
-  document.body.addEventListener('click', initReloj,   { once: true });
-  document.body.addEventListener('touchstart', initReloj, { once: true });
 </script>
 </body>
 </html>
