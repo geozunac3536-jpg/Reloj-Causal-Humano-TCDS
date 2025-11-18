@@ -83,6 +83,7 @@
       from { transform: rotate(0deg); } 
       to   { transform: rotate(360deg); } 
     }
+    
   </style>
 </head>
 <body>
@@ -136,31 +137,7 @@
           <line x1="732" y1="531" x2="708" y2="507"/>
         </g>
       </g>
-         <!-- SONAR CAUSAL — DISTANCIA POR ECO -->
-<div class="card" id="sonarCard">
-  <div class="card-title">Sonar Causal — Distancia por eco</div>
 
-  <div class="text-block">
-    Este experimento emite un breve <em>chirp</em> por el altavoz del teléfono
-    y escucha los ecos con el micrófono para estimar la distancia al objeto
-    más cercano que refleje el sonido.
-  </div>
-
-  <button class="btn" id="sonarBtn">Emitir ping y medir</button>
-
-  <div class="text-block" style="margin-top:10px;">
-    Distancia estimada: <strong id="sonarDistance">—</strong><br>
-    Calidad del eco (coef. correlación): <strong id="sonarQuality">—</strong>
-  </div>
-
-  <div class="text-block" id="sonarStatus" style="font-size:11px; opacity:0.8;">
-    Esperando primer ping…
-  </div>
-
-  <div class="log" id="sonarLog" style="margin-top:8px; max-height:120px;">
-    <!-- Aquí se irán apilando las últimas mediciones -->
-  </div>
-</div>
       <!-- Escala de frecuencia (misma corona, lectura para aguja magenta) -->
       <g id="scaleF">
         <text x="500" y="140" fill="#9CA3AF" font-size="18" text-anchor="middle">f_dom(|a|) [Hz]</text>
@@ -212,7 +189,41 @@
   </div>
 
 </div>
+<!-- TRAYECTORIA CAUSAL (GPS) -->
+<div class="card" id="gpsCard">
+  <div class="card-title">Trayectoria Causal — GPS</div>
 
+  <div class="text-block">
+    Este módulo usa la ubicación del dispositivo para construir una
+    <strong>trayectoria causal</strong>: posición, velocidad y un índice
+    de coherencia de ruta (C_flow) a partir de los últimos puntos GPS.
+  </div>
+
+  <button class="btn" id="gpsStartBtn">Iniciar medición GPS</button>
+
+  <div class="text-block" style="margin-top:10px;">
+    Latitud: <strong id="gpsLat">—</strong><br>
+    Longitud: <strong id="gpsLon">—</strong><br>
+    Altitud: <strong id="gpsAlt">—</strong><br>
+    Precisión horizontal: <strong id="gpsAcc">—</strong><br>
+    Velocidad: <strong id="gpsSpeed">—</strong><br>
+    Rumbo: <strong id="gpsHeading">—</strong>
+  </div>
+
+  <div class="text-block" style="margin-top:8px;">
+    Desplazamiento neto (desde inicio): <strong id="gpsNetDist">—</strong><br>
+    Longitud del camino (últimas muestras): <strong id="gpsPathLen">—</strong><br>
+    Índice de trayecto coherente C_flow: <strong id="gpsCflow">—</strong>
+  </div>
+
+  <div class="text-block" id="gpsStatus" style="font-size:11px; opacity:0.8;">
+    Aún no se ha iniciado la medición GPS.
+  </div>
+
+  <div class="log" id="gpsLog" style="margin-top:8px; max-height:120px;">
+    <!-- Aquí se verán las últimas actualizaciones de posición -->
+  </div>
+</div>
 <script>
   // ==== Elementos clave ====
   const bigClock     = document.getElementById('bigClock');
@@ -575,6 +586,7 @@ if (sonarBtn) {
     }
   });
 }
+</script>
 </script>
 </body>
 </html>
