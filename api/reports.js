@@ -1,53 +1,120 @@
-// api/report.js
-// Recibe Σ-metrics de cada móvil y las guarda en un buffer en memoria (demo).
+// api/reports.js
+//
+// Endpoint unificado:
+//  - POST /api/reports → recibe eventos del Reloj Causal Humano
+//  - GET  /api/reports → devuelve resumen + últimos eventos
+//
+// Nota: almacenamiento en memoria (se pierde al reiniciar la función).
+// Es perfecto para experimento en Vercel.
 
-// Buffer global en este módulo.
-// OJO: en serverless puede resetearse; sirve como prototipo.
-let buffer = [];
-const MAX_BUFFER = 10000;
+let events = [];
+
+// Pequeño helper para formatear fecha legible
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toISOString(); // UTC, fácil de parsear
+}
 
 export default async function handler(req, res) {
-  // CORS básico para permitir llamadas desde GitHub Pages
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // CORS básico por si en algún momento lo llamas cross-origin
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método no permitido' });
+  if (req.method === "POST") {
+    try {
+      // Vercel puede darte body ya parseado o como string
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+
+      // Validación muy ligera
+      if (!body || !body.metrics) {
+        return res.status(400).json({ ok: false, error: "Payload inválido" });
+      }
+
+      const now = Date.now();
+
+      const event = {
+        device_id: body.device_id || "anon",
+        mode: body.mode || "desconocido",
+        timestamp: body.timestamp || now,
+        receivedAt: now,
+        metrics: {
+          aMag: body.metrics.aMag ?? null,
+          tC_proxy: body.metrics.tC_proxy ?? null,
+          LI_proxy: body.metrics.LI_proxy ?? null,
+          R_proxy: body.metrics.R_proxy ?? null,
+          dH_proxy: body.metrics.dH_proxy ?? null,
+          sampleRate: body.metrics.sampleRate ?? null,
+        },
+      };
+
+      events.push(event);
+
+      // Limitar a los últimos 1000 registros para no crecer infinito
+      if (events.length > 1000) {
+        events = events.slice(-1000);
+      }
+
+      console.log("Nuevo evento causal:", {
+        device_id: event.device_id,
+        mode: event.mode,
+        LI: event.metrics.LI_proxy,
+        R: event.metrics.R_proxy,
+        dH: event.metrics.dH_proxy,
+      });
+
+      return res.status(200).json({ ok: true });
+    } catch (err) {
+      console.error("Error procesando POST /api/reports:", err);
+      return res.status(500).json({ ok: false, error: "Error interno" });
+    }
   }
 
-  try {
-    const body = req.body || {};
-
-    const record = {
-      timestamp: body.timestamp || Date.now(),
-      device_id: body.device_id || 'anon',
-      t_C: Number(body.t_C) || 0,
-      LI:  Number(body.LI)  || 0,
-      R:   Number(body.R)   || 0,
-      dH:  Number(body.dH ?? body['ΔH'] ?? 0),
-      C_flow: Number(body.C_flow ?? 0),
-      entropy_ok: !!body.entropy_ok,
-      locking_ok: !!body.locking_ok,
-      battery: body.battery != null ? Number(body.battery) : null,
-      geo: Array.isArray(body.geo) ? body.geo.slice(0, 2) : null,
+  if (req.method === "GET") {
+    // Agregados básicos por modo
+    const counts = {
+      total: events.length,
+      baseline: 0,
+      ruido: 0,
+      ventana_q: 0,
+      otros: 0,
     };
 
-    buffer.push(record);
-    if (buffer.length > MAX_BUFFER) {
-      buffer.splice(0, buffer.length - MAX_BUFFER);
+    for (const ev of events) {
+      if (ev.mode === "baseline") counts.baseline++;
+      else if (ev.mode === "ruido") counts.ruido++;
+      else if (ev.mode === "ventana_q") counts.ventana_q++;
+      else counts.otros++;
     }
 
-    return res.status(200).json({ status: 'ok', stored: true });
-  } catch (err) {
-    console.error('Error en /api/report:', err);
-    return res.status(500).json({ error: 'Error interno' });
-  }
-}
+    // Últimos 50 eventos (más recientes primero)
+    const lastEvents = events
+      .slice(-50)
+      .reverse()
+      .map((ev) => ({
+        device_id: ev.device_id,
+        mode: ev.mode,
+        timestamp: ev.timestamp,
+        timestamp_iso: formatDate(ev.timestamp),
+        aMag: ev.metrics.aMag,
+        tC_proxy: ev.metrics.tC_proxy,
+        LI_proxy: ev.metrics.LI_proxy,
+        R_proxy: ev.metrics.R_proxy,
+        dH_proxy: ev.metrics.dH_proxy,
+        sampleRate: ev.metrics.sampleRate,
+      }));
 
-// Exportamos el buffer para que otros endpoints puedan leerlo (query.js)
-export { buffer };
+    return res.status(200).json({
+      ok: true,
+      counts,
+      lastEvents,
+    });
+  }
+
+  // Método no soportado
+  return res.status(405).json({ ok: false, error: "Método no permitido" });
+}
