@@ -406,8 +406,8 @@
 </div>
 
 <script>
+  <script>
   // ================= CONFIGURACIÓN BACKEND / TELEMETRÍA =================
-  // Ajusta esta URL si Vercel te asignó otro dominio al desplegar el proyecto.
   const REPORT_URL = "https://reloj-causal-humano-tcds.vercel.app/api/report";
 
   // ================= REFERENCIAS DOM =================
@@ -443,6 +443,9 @@
   let current_tC   = 0;
 
   let lastTime = 0;
+
+  // Demo: para que SIEMPRE veas una aguja aunque los sensores fallen
+  let demoTimer = null;
 
   // ================= FFT RADIX-2 =================
   function fft(real, imag) {
@@ -522,12 +525,11 @@
     const freqResolution = sampleRate / N;
     const peakFreq = peakBin * freqResolution;
 
-    // Aguja rosa: mapeo 0–60 Hz → -150° a +150°
+    // Aguja rosa: 0–60 Hz → -150°..+150°
     const fClamped = Math.max(0, Math.min(peakFreq, 60));
     const angle = (fClamped / 60) * 300 - 150;
     freqNeedle.setAttribute('transform', `rotate(${angle} 500 400)`);
 
-    // Textos
     peakFreqText.textContent = peakFreq.toFixed(2) + ' Hz';
     peakLiveEl.textContent   = peakFreq.toFixed(2) + ' Hz';
     resLiveEl.textContent    = freqResolution.toFixed(3) + ' Hz/bin';
@@ -537,7 +539,7 @@
   function sendReport(mode) {
     try {
       const payload = {
-        device_id: (crypto.randomUUID && crypto.randomUUID()) || 'anon',
+        device_id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'anon',
         timestamp: Date.now(),
         mode,
         metrics: {
@@ -548,9 +550,7 @@
           dH_proxy: current_dH,
           sampleRate
         },
-        user_flags: {
-          // espacio reservado para contexto cualitativo futuro
-        }
+        user_flags: {}
       };
 
       const jsonStr = JSON.stringify(payload);
@@ -566,7 +566,7 @@
         }).catch(() => {});
       }
     } catch (err) {
-      console.error('Error al preparar/mandar reporte causal:', err);
+      console.error('Error al mandar reporte causal:', err);
     }
   }
 
@@ -602,29 +602,23 @@
     const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / windowSize;
     const std = Math.sqrt(variance);
 
-    // Proxy simple: std pequeño → más locking, ΔH negativo
-    const stdNorm = Math.min(std / 5, 1);   // 0..1 aprox
-    current_dH = -0.5 + stdNorm;           // -0.5 .. +0.5
-    current_LI = 1 - stdNorm;              // 1..0
-    current_R  = 0.5 + 0.5 * (1 - stdNorm);// 0.5..1
+    const stdNorm = Math.min(std / 5, 1);
+    current_dH = -0.5 + stdNorm;            // -0.5..+0.5
+    current_LI = 1 - stdNorm;               // 1..0
+    current_R  = 0.5 + 0.5 * (1 - stdNorm); // 0.5..1
 
-    // E-Veto proxy
     const entropy_ok = current_dH <= -0.2;
     const locking_ok = current_LI >= 0.9 && current_R > 0.95;
     const strongMotion = current_aMag > 3.0;
 
     let mode = 'baseline';
-
-    if (locking_ok && entropy_ok) {
-      mode = 'ventana_q';
-    } else if (strongMotion || current_dH >= 0) {
-      mode = 'ruido';
-    }
+    if (locking_ok && entropy_ok)      mode = 'ventana_q';
+    else if (strongMotion || current_dH >= 0) mode = 'ruido';
 
     if (mode !== lastMode) {
       console.log('Nuevo estado causal:', mode, {
         LI: current_LI.toFixed(3),
-        R: current_R.toFixed(3),
+        R:  current_R.toFixed(3),
         dH: current_dH.toFixed(3)
       });
       sendReport(mode);
@@ -632,10 +626,26 @@
       lastMode = mode;
     }
 
-    // actualizar métricas visibles
     if (liLiveEl) liLiveEl.textContent = current_LI.toFixed(3);
     if (rLiveEl)  rLiveEl.textContent  = current_R.toFixed(3);
     if (dHLiveEl) dHLiveEl.textContent = current_dH.toFixed(3);
+  }
+
+  // ================= DEMO: AGUJA GIRANDO SIN SENSORES =================
+  function startDemo() {
+    if (!tcNeedle) return;
+    let angle = -60;
+    demoTimer = setInterval(() => {
+      angle = (angle + 3) % 360;
+      tcNeedle.setAttribute('transform', `rotate(${angle} 500 400)`);
+    }, 80);
+  }
+
+  function stopDemo() {
+    if (demoTimer) {
+      clearInterval(demoTimer);
+      demoTimer = null;
+    }
   }
 
   // ================= MANEJADOR DE MOVIMIENTO =================
@@ -667,13 +677,11 @@
 
     current_aMag = mag;
 
-    // Aguja t_C (azul): mapeo |a| → [-60°, +60°]
     const norm = Math.min(mag / 20, 1);
     const tcAngle = -60 + norm * 120;
-    current_tC = norm * 2 - 1; // [-1,1] approx
+    current_tC = norm * 2 - 1;
     tcNeedle.setAttribute('transform', `rotate(${tcAngle} 500 400)`);
 
-    // Espectro y estado causal
     computeSpectrum();
     updateCausalState();
 
@@ -683,19 +691,25 @@
   // ================= INICIO SENSORES =================
   async function initSensors() {
     try {
+      stopDemo(); // apagamos modo demo al primer toque
+
       if (typeof DeviceMotionEvent !== 'undefined' &&
           typeof DeviceMotionEvent.requestPermission === 'function') {
         const perm = await DeviceMotionEvent.requestPermission();
         if (perm !== 'granted') {
-          alert('Permiso de movimiento denegado. No se puede activar el reloj causal.');
+          alert('Permiso de movimiento denegado. El reloj quedará sólo en modo demo.');
+          startDemo();
           return;
         }
       }
+
       window.addEventListener('devicemotion', handleMotion);
       bigClock.classList.add('ready');
       console.log('Reloj Causal Humano: sensores activados');
     } catch (err) {
       console.error('Error al iniciar sensores:', err);
+      // Si algo revienta, volvemos a modo demo
+      startDemo();
     }
   }
 
@@ -705,9 +719,11 @@
     fftNDisplay.textContent = N;
   });
 
-  // Primer toque → activar sensores
+  // Modo demo inmediato para que se vea SIEMPRE la aguja
+  startDemo();
+
+  // Primer toque → activar sensores reales
   document.body.addEventListener('click', initSensors, { once: true });
   document.body.addEventListener('touchstart', initSensors, { once: true });
 </script>
-</body>
-</html>
+  <html>
