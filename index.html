@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <title>Reloj Causal Humano — TCDS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+        content="Reloj Causal Humano TCDS: visualización de tiempo causal t_C, espectro de aceleración y Filtro E-Veto proxy en dispositivos móviles.">
+  <meta name="author" content="Genaro Carrasco Ozuna — Teoría Cromodinámica Sincrónica (TCDS)" />
   <style>
     :root {
       --bg: #050713;
@@ -13,6 +16,7 @@
       --accent2: #ff6bff;
       --danger: #ff6b6b;
       --ok: #4ade80;
+      --warn: #f97316;
       --card-radius: 20px;
       --shadow-soft: 0 20px 50px rgba(0,0,0,0.6);
     }
@@ -40,7 +44,7 @@
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 18px;
     }
 
     /* ==================== RELOJ CAUSAL GRANDE ==================== */
@@ -52,6 +56,7 @@
       border: 1px solid rgba(255,255,255,0.06);
       position: relative;
       overflow: hidden;
+      transition: box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
     }
 
     .big-clock svg {
@@ -64,25 +69,58 @@
       box-shadow:
         0 0 30px rgba(56,189,248,0.7),
         0 0 80px rgba(59,130,246,0.9);
+      border-color: rgba(56,189,248,0.7);
+    }
+
+    .mode-pill {
+      position: absolute;
+      inset: 18px 22px auto auto;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15,23,42,0.92);
+      border: 1px solid rgba(148,163,184,0.7);
+    }
+
+    .mode-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(53,224,255,0.85);
+    }
+
+    .mode-pill.mode-baseline {
+      border-color: rgba(148,163,184,0.7);
+      color: #e5e7eb;
+    }
+    .mode-pill.mode-ruido {
+      border-color: rgba(248,113,113,0.9);
+      color: var(--danger);
+    }
+    .mode-pill.mode-q {
+      border-color: rgba(74,222,128,0.9);
+      color: var(--ok);
+    }
+    .mode-pill.mode-ruido .mode-dot {
+      background: var(--danger);
+      box-shadow: 0 0 12px rgba(248,113,113,0.95);
+    }
+    .mode-pill.mode-q .mode-dot {
+      background: var(--ok);
+      box-shadow: 0 0 12px rgba(74,222,128,0.95);
     }
 
     /* ==================== TARJETAS ==================== */
-    .cards-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-      gap: 12px;
-    }
-
-    @media (max-width: 840px) {
-      .cards-row {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-
     .card {
       background: var(--bg-alt);
       border-radius: var(--card-radius);
-      padding: 14px 14px 16px;
+      padding: 14px 16px 16px;
       box-shadow: var(--shadow-soft);
       border: 1px solid rgba(255,255,255,0.06);
     }
@@ -97,42 +135,77 @@
     }
 
     .text-block {
-      font-size: 12px;
+      font-size: 12.5px;
       line-height: 1.55;
       opacity: 0.88;
+      margin-bottom: 8px;
     }
 
-    .status-line {
+    .small {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .metrics-line {
       font-size: 12px;
-      margin-bottom: 4px;
+      margin-top: 4px;
     }
 
-    /* ==================== MÓDULO ESTADO CAUSAL ==================== */
-    .causal-badge {
+    .metrics-line span {
+      display: inline-block;
+      min-width: 80px;
+    }
+
+    .badge-inline {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 10px;
+      padding: 3px 8px;
       border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      background: rgba(148,163,184,0.15);
-      border: 1px solid rgba(148,163,184,0.5);
+      font-size: 10px;
+      background: rgba(15,23,42,0.95);
+      border: 1px solid rgba(148,163,184,0.6);
+      margin-top: 4px;
     }
 
-    .causal-dot {
-      width: 10px;
-      height: 10px;
+    .badge-dot-sm {
+      width: 6px;
+      height: 6px;
       border-radius: 999px;
-      background: #9ca3af;
-      box-shadow: 0 0 8px rgba(156,163,175,0.8);
+      background: var(--accent);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 800px) {
+      .grid-2 {
+        grid-template-columns: minmax(0,1fr);
+      }
+    }
+
+    /* ==================== FOOTER ==================== */
+    footer {
+      margin-top: 10px;
+      font-size: 11px;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
     }
 
     /* ==================== ANIMACIONES ==================== */
-    @keyframes spin-slow {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -140,6 +213,11 @@
 
   <!-- RELOJ CAUSAL GRANDE -->
   <div class="big-clock" id="bigClock">
+    <div class="mode-pill mode-baseline" id="modePill">
+      <span class="mode-dot"></span>
+      <span id="modeLabel">BASELINE φ-DRIVEN</span>
+    </div>
+
     <svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -162,147 +240,230 @@
 
       <!-- Fondo -->
       <circle cx="500" cy="400" r="380" fill="#0b0f1f"/>
-      <circle cx="500" cy="400" r="375"
-              stroke="url(#gradRing)" stroke-width="10"
-              fill="none" opacity="0.7"/>
+      <circle cx="500" cy="400" r="375" stroke="url(#gradRing)" stroke-width="10" fill="none" opacity="0.7"/>
 
       <!-- Dial giratorio lento -->
-      <g id="dialSpin" transform="translate(500,400)"
-         style="animation: spin-slow 48s linear infinite;">
-        <circle r="340" fill="none" stroke="#40FF9C"
-                stroke-width="2" stroke-dasharray="8 16"
-                opacity="0.4"/>
-        <circle r="300" fill="none" stroke="#35e0ff"
-                stroke-width="1" stroke-dasharray="4 12"
-                opacity="0.3"/>
+      <g id="dialSpin" transform="translate(500,400)" style="animation: spin-slow 48s linear infinite;">
+        <circle r="340" fill="none" stroke="#40FF9C" stroke-width="2"
+                stroke-dasharray="8 16" opacity="0.4"/>
+        <circle r="300" fill="none" stroke="#35e0ff" stroke-width="1"
+                stroke-dasharray="4 12" opacity="0.3"/>
       </g>
 
-      <!-- Encabezado espectro -->
+      <!-- Regla superior: espectro de aceleración -->
       <g id="freqScale">
         <text x="500" y="70" fill="#9CA3AF" font-size="24" text-anchor="middle">
-          Espectro de aceleración
+          Espectro de aceleración |a|
         </text>
-        <text x="500" y="100" fill="#60a5ff" font-size="18" text-anchor="middle"
-              id="peakFreqText">0.00 Hz</text>
+        <text x="500" y="98" fill="#60a5ff" font-size="18" text-anchor="middle" id="peakFreqText">
+          0.00 Hz
+        </text>
+
+        <!-- Marcas f ~ 0, 10, 20, 30, 40, 50 Hz -->
+        <!-- 0 Hz (arriba) -->
+        <g stroke="#35e0ff" stroke-width="3">
+          <line x1="500" y1="52" x2="500" y2="80"/>
+        </g>
+        <text x="500" y="118" fill="#35e0ff" font-size="12" text-anchor="middle">0</text>
       </g>
 
-      <!-- Aguja t_C principal -->
+      <!-- Aguja t_C principal (azul) -->
       <line id="tcNeedle"
-            x1="500" y1="400" x2="500" y2="150"
-            stroke="url(#gradNeedle)" stroke-width="8"
-            stroke-linecap="round"
+            x1="500" y1="400" x2="500" y2="160"
+            stroke="url(#gradNeedle)" stroke-width="8" stroke-linecap="round"
             transform="rotate(-60 500 400)"/>
 
-      <!-- Aguja de frecuencia pico (FFT) -->
+      <!-- Aguja de frecuencia pico (magenta) -->
       <line id="freqNeedle"
             x1="500" y1="400" x2="500" y2="110"
-            stroke="#ff6bff" stroke-width="5"
-            stroke-linecap="round"
+            stroke="#ff6bff" stroke-width="5" stroke-linecap="round"
             opacity="0.9" filter="url(#glow)"/>
 
       <!-- Centro -->
       <circle cx="500" cy="400" r="20" fill="#00E5FF"/>
       <circle cx="500" cy="400" r="12" fill="#020617"/>
-      <text x="500" y="415"
-            fill="#E5E7EB" font-size="32"
-            text-anchor="middle" font-weight="bold">
+
+      <text x="500" y="415" fill="#E5E7EB" font-size="32" text-anchor="middle" font-weight="bold">
         t_C
+      </text>
+      <text x="500" y="445" fill="#9CA3AF" font-size="12" text-anchor="middle">
+        Q · Σ = φ · Filtro E-Veto (proxy)
       </text>
     </svg>
   </div>
 
-  <!-- TARJETAS: ESTADO CAUSAL + ESTADO NUMÉRICO -->
-  <div class="cards-row">
-    <!-- Estado causal interpretado -->
+  <!-- PANEL INFERIOR: USO Y MÉTRICAS -->
+  <div class="grid-2">
+    <!-- Columna 1: Instrucciones para el usuario local -->
     <div class="card">
-      <div class="card-title">Estado causal actual</div>
-      <div class="causal-badge">
-        <span class="causal-dot" id="causalStateDot"></span>
-        <span id="causalStateLabel">Esperando datos…</span>
+      <div class="card-title">Cómo usar este reloj en tu móvil</div>
+      <div class="text-block">
+        1. <strong>Toca una vez la pantalla</strong> para activar los sensores del dispositivo 
+        (acelerómetro). En algunos navegadores deberás aceptar el permiso de movimiento.
       </div>
-      <p class="text-block" id="causalStateText" style="margin-top:8px;">
-        Mantén el teléfono quieto unos segundos y luego muévelo suavemente.
-      </p>
+      <div class="text-block">
+        2. El reloj mide la <strong>aceleración total |a|</strong> (incluyendo gravedad), calcula un
+        <strong>espectro de frecuencias</strong> y estima:
+        <ul style="margin:4px 0 0 16px; padding-left:0; list-style:disc; font-size:12px;">
+          <li>Un <strong>proxy de tiempo causal t_C</strong> (aguja azul).</li>
+          <li>La <strong>frecuencia dominante</strong> del movimiento (aguja rosa).</li>
+          <li>Índices de coherencia (LI, R) y entropía (ΔH) como <em>E-Veto proxy</em>.</li>
+        </ul>
+      </div>
+      <div class="text-block">
+        3. El indicador superior de estado cambia según las métricas:
+        <div class="badge-inline">
+          <span class="badge-dot-sm"></span>
+          <span>BASELINE φ-driven</span>
+        </div>
+        <span class="small">Ruido normal / referencia.</span><br/>
+        <div class="badge-inline" style="border-color:rgba(248,113,113,0.9); color:var(--danger);">
+          <span class="badge-dot-sm" style="background:var(--danger);"></span>
+          <span>MOVIMIENTO ENTRÓPICO</span>
+        </div>
+        <span class="small">Agitación fuerte o ΔH ≥ 0.</span><br/>
+        <div class="badge-inline" style="border-color:rgba(74,222,128,0.9); color:var(--ok);">
+          <span class="badge-dot-sm" style="background:var(--ok);"></span>
+          <span>VENTANA Q-DRIVEN</span>
+        </div>
+        <span class="small">
+          Sólo si LI ≥ 0.9, R &gt; 0.95 y ΔH ≤ −0.2 (candidata coherente).
+        </span>
+      </div>
+      <div class="text-block small">
+        Este nodo sólo usa los sensores locales y no solicita datos de identidad. En modo
+        experimento distribuido, los cambios de estado pueden enviarse de forma anónima
+        al servidor TCDS como telemetría de coherencia.
+      </div>
     </div>
 
-    <!-- Estado numérico básico -->
+    <!-- Columna 2: Métricas en vivo + N FFT -->
     <div class="card">
-      <div class="card-title">Lecturas actuales</div>
-      <p class="status-line">
-        Aceleración total |a|:
-        <strong id="magLive">0.00</strong> m/s²
-      </p>
-      <p class="status-line">
-        Frecuencia dominante:
-        <strong id="peakLive">0.00</strong> Hz
-      </p>
-      <p class="status-line">
-        Resolución FFT:
-        <strong id="resLive">0.00</strong> Hz/bin
-      </p>
-      <p class="status-line">
-        ΔH (proxy):
-        <strong id="dHLive">0.00</strong>
-      </p>
-      <p class="status-line">
-        LI (proxy):
-        <strong id="LILive">0.00</strong>
-      </p>
-      <p class="status-line">
-        R (proxy):
-        <strong id="RLive">0.00</strong>
-      </p>
+      <div class="card-title">Métricas Σ-proxy en tiempo real</div>
+      <div class="metrics-line">
+        <span>|a|:</span> <strong id="magLive">0.00</strong> m/s²
+      </div>
+      <div class="metrics-line">
+        <span>f_pico:</span> <strong id="peakLive">0.00</strong> Hz
+      </div>
+      <div class="metrics-line">
+        <span>Δf_res:</span> <strong id="resLive">0.00</strong> Hz/bin
+      </div>
+      <div class="metrics-line">
+        <span>LI_proxy:</span> <strong id="liLive">0.00</strong>
+      </div>
+      <div class="metrics-line">
+        <span>R_proxy:</span> <strong id="rLive">0.00</strong>
+      </div>
+      <div class="metrics-line">
+        <span>ΔH_proxy:</span> <strong id="dHLive">0.00</strong>
+      </div>
+
+      <div style="margin-top:10px;">
+        <span class="small">
+          <strong>E-Veto proxy:</strong> ventana Q válida sólo si
+          LI ≥ 0.9, R &gt; 0.95 y ΔH ≤ −0.2.
+        </span>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="small" for="fftSizeSelect">
+          Número de muestras N para la FFT:
+        </label><br/>
+        <select id="fftSizeSelect" style="margin-top:4px; padding:4px 6px; border-radius:8px; border:1px solid rgba(148,163,184,0.6); background:#020617; color:var(--fg); font-size:12px;">
+          <option value="256">256 (rápido)</option>
+          <option value="512" selected>512 (equilibrado)</option>
+          <option value="1024">1024 (alta resolución)</option>
+          <option value="2048">2048 (máxima)</option>
+        </select>
+        <div class="small" style="margin-top:4px;">
+          N ↑ → mejor resolución en frecuencia, pero respuesta más lenta.
+        </div>
+        <div class="small" style="margin-top:2px;">
+          N actual: <strong id="fftN">512</strong> muestras.
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- FOOTER / AUTORÍA -->
+  <footer>
+    Reloj Causal Humano — Nodo experimental de la
+    <strong>Teoría Cromodinámica Sincrónica (TCDS)</strong>.<br/>
+    Autor: <strong>Genaro Carrasco Ozuna</strong> ·
+    ORCID: <a href="https://orcid.org/0009-0005-6358-9910" target="_blank" rel="noopener">
+      0009-0005-6358-9910
+    </a> ·
+    Ko-fi: <a href="https://ko-fi.com/genarocarrasco" target="_blank" rel="noopener">
+      ko-fi.com/genarocarrasco
+    </a><br/>
+    Registro de propiedad intelectual TCDS: DOI
+    <a href="https://doi.org/10.5281/zenodo.17520491" target="_blank" rel="noopener">
+      10.5281/zenodo.17520491
+    </a>
+  </footer>
 
 </div>
 
 <script>
-  // ================== ELEMENTOS SVG Y DOM ==================
-  const bigClock      = document.getElementById('bigClock');
+  // ================= CONFIGURACIÓN BACKEND / TELEMETRÍA =================
+  // Ajusta esta URL si Vercel te asignó otro dominio al desplegar el proyecto.
+  const REPORT_URL = "https://reloj-causal-humano-tcds.vercel.app/api/report";
+
+  // ================= REFERENCIAS DOM =================
   const tcNeedle      = document.getElementById('tcNeedle');
   const freqNeedle    = document.getElementById('freqNeedle');
   const peakFreqText  = document.getElementById('peakFreqText');
+  const fftSizeSelect = document.getElementById('fftSizeSelect');
+  const fftNDisplay   = document.getElementById('fftN');
 
-  const magLiveEl = document.getElementById('magLive');
+  const magLiveEl  = document.getElementById('magLive');
   const peakLiveEl = document.getElementById('peakLive');
-  const resLiveEl = document.getElementById('resLive');
-  const dHLiveEl  = document.getElementById('dHLive');
-  const LILiveEl  = document.getElementById('LILive');
-  const RLiveEl   = document.getElementById('RLive');
+  const resLiveEl  = document.getElementById('resLive');
+  const liLiveEl   = document.getElementById('liLive');
+  const rLiveEl    = document.getElementById('rLive');
+  const dHLiveEl   = document.getElementById('dHLive');
 
-  const causalStateDot   = document.getElementById('causalStateDot');
-  const causalStateLabel = document.getElementById('causalStateLabel');
-  const causalStateText  = document.getElementById('causalStateText');
+  const bigClock  = document.getElementById('bigClock');
+  const modePill  = document.getElementById('modePill');
+  const modeLabel = document.getElementById('modeLabel');
 
-  // ================== VARIABLES Σ-METRICS (PROXIES) ==================
-  let current_tC   = 0; // proxy: normalizado 0–1 desde |a|
-  let current_LI   = 0; // proxy: locking index (bajo std → alto LI)
-  let current_R    = 0; // proxy: coef. correlación aproximado
-  let current_dH   = 0; // proxy: “entropía” (std normalizada)
-  let current_aMag = 0; // |a| instantánea
+  // ================= ESTADO GLOBAL =================
+  let accelBuffer  = [];
+  let timestamps   = [];
+  let N            = 512;
+  let sampleRate   = 0;
 
-  // ================== BUFFER Y FFT ==================
-  let accelBuffer = [];
-  let timestamps  = [];
-  let N           = 512;
-  let sampleRate  = 0;
+  let lastMode     = null;
+
+  let current_aMag = 0;
+  let current_LI   = 0;
+  let current_R    = 0;
+  let current_dH   = 0;
+  let current_tC   = 0;
 
   let lastTime = 0;
 
+  // ================= FFT RADIX-2 =================
   function fft(real, imag) {
     const n = real.length;
     if (n <= 1) return;
+
     let levels = -1;
     for (let i = 0; i < 32; i++) {
-      if (1 << i === n) { levels = i; break; }
+      if ((1 << i) === n) {
+        levels = i;
+        break;
+      }
     }
     if (levels === -1) return;
 
     // bit-reversal
     for (let i = 0; i < n; i++) {
       let j = 0;
-      for (let k = 0; k < levels; k++) j = (j << 1) | ((i >> k) & 1);
+      for (let k = 0; k < levels; k++) {
+        j = (j << 1) | ((i >> k) & 1);
+      }
       if (j > i) {
         [real[i], real[j]] = [real[j], real[i]];
         [imag[i], imag[j]] = [imag[j], imag[i]];
@@ -325,26 +486,26 @@
           imag[l] = imag[k] - ti;
           real[k] += tr;
           imag[k] += ti;
-          const temp = wpr * wr - wpi * wi;
+          const tmp = wpr * wr - wpi * wi;
           wpi = wpr * wi + wpi * wr;
-          wpr = temp;
+          wpr = tmp;
         }
       }
     }
   }
 
+  // ================= ESPECTRO DE ACELERACIÓN =================
   function computeSpectrum() {
-    if (accelBuffer.length < N || sampleRate <= 0) return;
+    if (accelBuffer.length < N) return;
 
     const slice = accelBuffer.slice(-N);
-    const mean  = slice.reduce((a, b) => a + b, 0) / N;
-
+    const mean = slice.reduce((a, b) => a + b, 0) / N;
     const real = slice.map(v => v - mean);
     const imag = new Array(N).fill(0);
 
     fft(real, imag);
 
-    const half = N >>> 1;
+    const half = N >> 1;
     let maxMag = 0;
     let peakBin = 0;
 
@@ -356,54 +517,101 @@
       }
     }
 
+    if (sampleRate <= 0) return;
+
     const freqResolution = sampleRate / N;
     const peakFreq = peakBin * freqResolution;
-    const fMax     = sampleRate / 2;
 
-    // Actualizar aguja de frecuencia pico → mapeo 0–60 Hz a -150..+150°
-    const fRef = Math.max(1, Math.min(60, fMax || 60));
-    const normF = Math.max(0, Math.min(peakFreq / fRef, 1));
-    const angleF = -150 + normF * 300;
-    freqNeedle.setAttribute('transform', `rotate(${angleF} 500 400)`);
+    // Aguja rosa: mapeo 0–60 Hz → -150° a +150°
+    const fClamped = Math.max(0, Math.min(peakFreq, 60));
+    const angle = (fClamped / 60) * 300 - 150;
+    freqNeedle.setAttribute('transform', `rotate(${angle} 500 400)`);
 
     // Textos
     peakFreqText.textContent = peakFreq.toFixed(2) + ' Hz';
     peakLiveEl.textContent   = peakFreq.toFixed(2) + ' Hz';
     resLiveEl.textContent    = freqResolution.toFixed(3) + ' Hz/bin';
-
-    // ---------- PROXIES Σ-METRICS DESDE STD ----------
-    let variance = 0;
-    for (let i = 0; i < N; i++) {
-      const d = slice[i] - mean;
-      variance += d * d;
-    }
-    variance /= N;
-    const std = Math.sqrt(variance);
-
-    // stdNorm ~ [0,1] para std aprox 0–5 m/s²
-    const stdNorm = Math.max(0, Math.min(std / 5, 1));
-
-    // ΔH proxy: [-0.5, +0.5] (baja std → ΔH negativo)
-    current_dH = -0.5 + stdNorm;
-
-    // LI y R proxys: más altos cuando la señal es “apretada”
-    current_LI = 1 - stdNorm;
-    current_R  = 0.5 + 0.5 * (1 - stdNorm);
-
-    if (dHLiveEl) dHLiveEl.textContent = current_dH.toFixed(3);
-    if (LILiveEl) LILiveEl.textContent = current_LI.toFixed(3);
-    if (RLiveEl)  RLiveEl.textContent  = current_R.toFixed(3);
-
-    updateCausalState();
   }
 
-  // ================== ESTADO CAUSAL (SEMÁFORO) ==================
-  function updateCausalState() {
-    if (!causalStateDot || !causalStateLabel || !causalStateText) return;
+  // ================= TELEMETRÍA =================
+  function sendReport(mode) {
+    try {
+      const payload = {
+        device_id: (crypto.randomUUID && crypto.randomUUID()) || 'anon',
+        timestamp: Date.now(),
+        mode,
+        metrics: {
+          aMag: current_aMag,
+          tC_proxy: current_tC,
+          LI_proxy: current_LI,
+          R_proxy: current_R,
+          dH_proxy: current_dH,
+          sampleRate
+        },
+        user_flags: {
+          // espacio reservado para contexto cualitativo futuro
+        }
+      };
 
-    const entropy_ok = current_dH <= -0.2; // E-Veto proxy
+      const jsonStr = JSON.stringify(payload);
+
+      if (navigator.sendBeacon) {
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        navigator.sendBeacon(REPORT_URL, blob);
+      } else {
+        fetch(REPORT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonStr
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('Error al preparar/mandar reporte causal:', err);
+    }
+  }
+
+  // ================= E-VETO PROXY / CLASIFICADOR =================
+  function setModeVisual(mode) {
+    if (!modePill || !modeLabel) return;
+    modePill.classList.remove('mode-baseline', 'mode-ruido', 'mode-q');
+
+    if (mode === 'ventana_q') {
+      modePill.classList.add('mode-q');
+      modeLabel.textContent = 'VENTANA Q-DRIVEN';
+      bigClock.style.background =
+        'radial-gradient(circle at center, #064e3b 0%, #050713 70%)';
+    } else if (mode === 'ruido') {
+      modePill.classList.add('mode-ruido');
+      modeLabel.textContent = 'MOVIMIENTO ENTRÓPICO / RUIDO';
+      bigClock.style.background =
+        'radial-gradient(circle at center, #450a0a 0%, #050713 70%)';
+    } else {
+      modePill.classList.add('mode-baseline');
+      modeLabel.textContent = 'BASELINE φ-DRIVEN';
+      bigClock.style.background =
+        'radial-gradient(circle at center, #182546 0%, #050713 70%)';
+    }
+  }
+
+  function updateCausalState() {
+    const windowSize = Math.min(accelBuffer.length, N);
+    if (windowSize < 32) return;
+
+    const slice = accelBuffer.slice(-windowSize);
+    const mean = slice.reduce((a, b) => a + b, 0) / windowSize;
+    const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / windowSize;
+    const std = Math.sqrt(variance);
+
+    // Proxy simple: std pequeño → más locking, ΔH negativo
+    const stdNorm = Math.min(std / 5, 1);   // 0..1 aprox
+    current_dH = -0.5 + stdNorm;           // -0.5 .. +0.5
+    current_LI = 1 - stdNorm;              // 1..0
+    current_R  = 0.5 + 0.5 * (1 - stdNorm);// 0.5..1
+
+    // E-Veto proxy
+    const entropy_ok = current_dH <= -0.2;
     const locking_ok = current_LI >= 0.9 && current_R > 0.95;
-    const strongMotion = current_aMag > 3.0; // umbral crude para “agitación”
+    const strongMotion = current_aMag > 3.0;
 
     let mode = 'baseline';
 
@@ -411,32 +619,26 @@
       mode = 'ventana_q';
     } else if (strongMotion || current_dH >= 0) {
       mode = 'ruido';
-    } else {
-      mode = 'baseline';
     }
 
-    if (mode === 'baseline') {
-      causalStateDot.style.background = '#9ca3af';
-      causalStateDot.style.boxShadow  = '0 0 8px rgba(156,163,175,0.9)';
-      causalStateLabel.textContent    = 'Baseline φ-driven';
-      causalStateText.textContent     =
-        'El reloj está midiendo fricción / ruido de fondo. Útil como línea base antes de buscar coherencia.';
-    } else if (mode === 'ruido') {
-      causalStateDot.style.background = '#f97316';
-      causalStateDot.style.boxShadow  = '0 0 10px rgba(249,115,22,0.9)';
-      causalStateLabel.textContent    = 'Movimiento entrópico';
-      causalStateText.textContent     =
-        'Sistema en agitación fuerte o entropía creciente (ΔH ≥ 0). Es poco probable que haya locking estable aquí.';
-    } else if (mode === 'ventana_q') {
-      causalStateDot.style.background = '#22c55e';
-      causalStateDot.style.boxShadow  = '0 0 12px rgba(34,197,94,0.9)';
-      causalStateLabel.textContent    = 'Ventana candidata Q-driven';
-      causalStateText.textContent     =
-        'Los indicadores sugieren una ventana coherencial (locking_ok & ΔH ≤ -0.2). Candidata para análisis más fino.';
+    if (mode !== lastMode) {
+      console.log('Nuevo estado causal:', mode, {
+        LI: current_LI.toFixed(3),
+        R: current_R.toFixed(3),
+        dH: current_dH.toFixed(3)
+      });
+      sendReport(mode);
+      setModeVisual(mode);
+      lastMode = mode;
     }
+
+    // actualizar métricas visibles
+    if (liLiveEl) liLiveEl.textContent = current_LI.toFixed(3);
+    if (rLiveEl)  rLiveEl.textContent  = current_R.toFixed(3);
+    if (dHLiveEl) dHLiveEl.textContent = current_dH.toFixed(3);
   }
 
-  // ================== MANEJADOR DE ACELERACIÓN ==================
+  // ================= MANEJADOR DE MOVIMIENTO =================
   function handleMotion(e) {
     const a = e.accelerationIncludingGravity;
     if (!a) return;
@@ -447,54 +649,65 @@
     const mag = Math.hypot(ax, ay, az);
 
     const now = performance.now();
+
     if (lastTime > 0) {
       const dt = (now - lastTime) / 1000;
-      if (dt > 0) sampleRate = 1 / dt;
+      if (dt > 0 && dt < 1) {
+        sampleRate = 1 / dt;
+      }
     }
     lastTime = now;
 
-    current_aMag = mag;
-
-    // t_C proxy (aguja principal) → norm 0–1 desde |a|
-    const norm = Math.min(mag / 20, 1);
-    current_tC = norm;
-    const tcAngle = -60 + norm * 120;
-    tcNeedle.setAttribute('transform', `rotate(${tcAngle} 500 400)`);
-
-    // Buffer para FFT
-    accelBuffer.push(mag);
     timestamps.push(now);
+    accelBuffer.push(mag);
     if (accelBuffer.length > 4096) {
       accelBuffer.shift();
       timestamps.shift();
     }
 
-    if (magLiveEl) magLiveEl.textContent = mag.toFixed(2);
+    current_aMag = mag;
 
+    // Aguja t_C (azul): mapeo |a| → [-60°, +60°]
+    const norm = Math.min(mag / 20, 1);
+    const tcAngle = -60 + norm * 120;
+    current_tC = norm * 2 - 1; // [-1,1] approx
+    tcNeedle.setAttribute('transform', `rotate(${tcAngle} 500 400)`);
+
+    // Espectro y estado causal
     computeSpectrum();
+    updateCausalState();
+
+    if (magLiveEl) magLiveEl.textContent = mag.toFixed(2);
   }
 
-  // ================== INICIO ==================
-  async function init() {
+  // ================= INICIO SENSORES =================
+  async function initSensors() {
     try {
       if (typeof DeviceMotionEvent !== 'undefined' &&
           typeof DeviceMotionEvent.requestPermission === 'function') {
         const perm = await DeviceMotionEvent.requestPermission();
         if (perm !== 'granted') {
-          alert('Permiso de sensores denegado.');
+          alert('Permiso de movimiento denegado. No se puede activar el reloj causal.');
           return;
         }
       }
       window.addEventListener('devicemotion', handleMotion);
       bigClock.classList.add('ready');
+      console.log('Reloj Causal Humano: sensores activados');
     } catch (err) {
       console.error('Error al iniciar sensores:', err);
     }
   }
 
-  // Primer toque → activar
-  document.body.addEventListener('click', init, { once: true });
-  document.body.addEventListener('touchstart', init, { once: true });
+  // ================= EVENTOS UI =================
+  fftSizeSelect.addEventListener('change', (e) => {
+    N = parseInt(e.target.value, 10) || 512;
+    fftNDisplay.textContent = N;
+  });
+
+  // Primer toque → activar sensores
+  document.body.addEventListener('click', initSensors, { once: true });
+  document.body.addEventListener('touchstart', initSensors, { once: true });
 </script>
 </body>
 </html>
