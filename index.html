@@ -263,8 +263,7 @@
           0.00 Hz
         </text>
 
-        <!-- Marcas f ~ 0, 10, 20, 30, 40, 50 Hz -->
-        <!-- 0 Hz (arriba) -->
+        <!-- Marca 0 Hz (arriba) -->
         <g stroke="#35e0ff" stroke-width="3">
           <line x1="500" y1="52" x2="500" y2="80"/>
         </g>
@@ -283,7 +282,7 @@
             stroke="#ff6bff" stroke-width="5" stroke-linecap="round"
             opacity="0.9" filter="url(#glow)"/>
 
-      <!-- Agujas para anillos punteados -->
+      <!-- Agujas para anillos punteados (R, LI) -->
       <line id="outerNeedle"
             x1="500" y1="400" x2="500" y2="60"
             stroke="url(#gradGreen)" stroke-width="6" stroke-linecap="round"
@@ -313,7 +312,7 @@
     <div class="card">
       <div class="card-title">Cómo usar este reloj en tu móvil</div>
       <div class="text-block">
-        1. <strong>Toca una vez la pantalla</strong> para activar los sensores del dispositivo 
+        1. <strong>Toca una vez la pantalla</strong> o pulsa “Start” para activar los sensores del dispositivo 
         (acelerómetro). En algunos navegadores deberás aceptar el permiso de movimiento.
       </div>
       <div class="text-block">
@@ -384,6 +383,9 @@
           <option value="1024">1024 (alta resolución)</option>
           <option value="2048">2048 (máxima)</option>
         </select>
+        <div class="small" style="margin-top:4px;">
+          N actual: <strong id="fftNText">512</strong> muestras
+        </div>
       </div>
 
       <div style="margin-top:12px; display:flex; gap:8px;">
@@ -414,8 +416,13 @@
 
 <script>
   // ================= CONFIGURACIÓN BACKEND / TELEMETRÍA =================
-  // Ajusta esta URL si Vercel te asignó otro dominio al desplegar el proyecto.
+  // AJUSTA ESTA URL SI VERCEL TE DIO OTRO DOMINIO O RUTA PARA LA API.
   const REPORT_URL = "https://reloj-causal-humano-tcds.vercel.app/api/report";
+
+  // ID pseudo-anónimo para esta sesión/nodo
+  const DEVICE_ID = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : ('anon-' + Math.random().toString(36).slice(2));
 
   // ================= REFERENCIAS DOM =================
   const tcNeedle      = document.getElementById('tcNeedle');
@@ -424,7 +431,7 @@
   const innerNeedle   = document.getElementById('innerNeedle');
   const peakFreqText  = document.getElementById('peakFreqText');
   const fftSizeSelect = document.getElementById('fftSizeSelect');
-  const fftNDisplay   = document.getElementById('fftN');
+  const fftNDisplay   = document.getElementById('fftNText');
 
   const magLiveEl  = document.getElementById('magLive');
   const peakLiveEl = document.getElementById('peakLive');
@@ -438,7 +445,7 @@
   const modeLabel = document.getElementById('modeLabel');
 
   const startBtn = document.getElementById('startBtn');
-  const stopBtn = document.getElementById('stopBtn');
+  const stopBtn  = document.getElementById('stopBtn');
 
   // ================= ESTADO GLOBAL =================
   let accelBuffer  = [];
@@ -537,19 +544,21 @@
     // Aguja rosa: mapeo 0–60 Hz → -150° a +150°
     const fClamped = Math.max(0, Math.min(peakFreq, 60));
     const angle = (fClamped / 60) * 300 - 150;
-    freqNeedle.setAttribute('transform', `rotate(${angle} 500 400)`);
+    if (freqNeedle) {
+      freqNeedle.setAttribute('transform', `rotate(${angle} 500 400)`);
+    }
 
     // Textos
-    peakFreqText.textContent = peakFreq.toFixed(2) + ' Hz';
-    peakLiveEl.textContent   = peakFreq.toFixed(2) + ' Hz';
-    resLiveEl.textContent    = freqResolution.toFixed(3) + ' Hz/bin';
+    if (peakFreqText) peakFreqText.textContent = peakFreq.toFixed(2) + ' Hz';
+    if (peakLiveEl)   peakLiveEl.textContent   = peakFreq.toFixed(2) + ' Hz';
+    if (resLiveEl)    resLiveEl.textContent    = freqResolution.toFixed(3) + ' Hz/bin';
   }
 
   // ================= TELEMETRÍA =================
   function sendReport(mode) {
     try {
       const payload = {
-        device_id: (crypto.randomUUID && crypto.randomUUID()) || 'anon',
+        device_id: DEVICE_ID,
         timestamp: Date.now(),
         mode,
         metrics: {
@@ -584,7 +593,7 @@
 
   // ================= E-VETO PROXY / CLASIFICADOR =================
   function setModeVisual(mode) {
-    if (!modePill || !modeLabel) return;
+    if (!modePill || !modeLabel || !bigClock) return;
     modePill.classList.remove('mode-baseline', 'mode-ruido', 'mode-q');
 
     if (mode === 'ventana_q') {
@@ -650,11 +659,15 @@
     if (dHLiveEl) dHLiveEl.textContent = current_dH.toFixed(3);
 
     // Actualizar agujas de anillos
-    const outerAngle = ((current_R - 0.5) / 0.5) * 300 - 150;
-    outerNeedle.setAttribute('transform', `rotate(${outerAngle} 500 400)`);
+    if (outerNeedle) {
+      const outerAngle = ((current_R - 0.5) / 0.5) * 300 - 150;
+      outerNeedle.setAttribute('transform', `rotate(${outerAngle} 500 400)`);
+    }
 
-    const innerAngle = current_LI * 300 - 150;
-    innerNeedle.setAttribute('transform', `rotate(${innerAngle} 500 400)`);
+    if (innerNeedle) {
+      const innerAngle = current_LI * 300 - 150;
+      innerNeedle.setAttribute('transform', `rotate(${innerAngle} 500 400)`);
+    }
   }
 
   // ================= MANEJADOR DE MOVIMIENTO =================
@@ -690,7 +703,9 @@
     const norm = Math.min(mag / 20, 1);
     const tcAngle = -60 + norm * 120;
     current_tC = norm * 2 - 1; // [-1,1] approx
-    tcNeedle.setAttribute('transform', `rotate(${tcAngle} 500 400)`);
+    if (tcNeedle) {
+      tcNeedle.setAttribute('transform', `rotate(${tcAngle} 500 400)`);
+    }
 
     // Espectro y estado causal
     computeSpectrum();
@@ -711,7 +726,7 @@
         }
       }
       window.addEventListener('devicemotion', handleMotion);
-      bigClock.classList.add('ready');
+      if (bigClock) bigClock.classList.add('ready');
       console.log('Reloj Causal Humano: sensores activados');
     } catch (err) {
       console.error('Error al iniciar sensores:', err);
@@ -719,17 +734,28 @@
   }
 
   // ================= EVENTOS UI =================
-  fftSizeSelect.addEventListener('change', (e) => {
-    N = parseInt(e.target.value, 10) || 512;
-    fftNDisplay.textContent = N;
-  });
+  if (fftSizeSelect) {
+    fftSizeSelect.addEventListener('change', (e) => {
+      N = parseInt(e.target.value, 10) || 512;
+      if (fftNDisplay) fftNDisplay.textContent = N;
+    });
+  }
 
-  startBtn.addEventListener('click', initSensors);
+  if (startBtn) {
+    startBtn.addEventListener('click', initSensors);
+  }
 
-  stopBtn.addEventListener('click', () => {
-    window.removeEventListener('devicemotion', handleMotion);
-    bigClock.classList.remove('ready');
-  });
+  if (stopBtn) {
+    stopBtn.addEventListener('click', () => {
+      window.removeEventListener('devicemotion', handleMotion);
+      if (bigClock) bigClock.classList.remove('ready');
+    });
+  }
+
+  // También puedes activar con primer toque global si quieres:
+  document.body.addEventListener('click', () => {
+    initSensors();
+  }, { once: true });
 </script>
 </body>
 </html>
