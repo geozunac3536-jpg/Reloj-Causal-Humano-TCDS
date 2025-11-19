@@ -1,120 +1,71 @@
 // api/reports.js
-//
-// Endpoint unificado:
-//  - POST /api/reports → recibe eventos del Reloj Causal Humano
-//  - GET  /api/reports → devuelve resumen + últimos eventos
-//
-// Nota: almacenamiento en memoria (se pierde al reiniciar la función).
-// Es perfecto para experimento en Vercel.
+// Endpoint de Ingesta TCDS - Nodo Geo-Sincronizado
 
+// Simulamos persistencia temporal para ver datos en /api/query sin base de datos real aún
 let events = [];
 
-// Pequeño helper para formatear fecha legible
-function formatDate(ts) {
-  const d = new Date(ts);
-  return d.toISOString(); // UTC, fácil de parsear
-}
-
 export default async function handler(req, res) {
-  // CORS básico por si en algún momento lo llamas cross-origin
+  // Headers CORS para permitir que el index.html (Github Pages) envíe datos
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method === "POST") {
     try {
-      // Vercel puede darte body ya parseado o como string
       const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-      // Validación muy ligera
-      if (!body || !body.metrics) {
-        return res.status(400).json({ ok: false, error: "Payload inválido" });
-      }
-
-      const now = Date.now();
-
+      // 1. Extracción de Datos TCDS
       const event = {
         device_id: body.device_id || "anon",
-        mode: body.mode || "desconocido",
-        timestamp: body.timestamp || now,
-        receivedAt: now,
-        metrics: {
-          aMag: body.metrics.aMag ?? null,
-          tC_proxy: body.metrics.tC_proxy ?? null,
-          LI_proxy: body.metrics.LI_proxy ?? null,
-          R_proxy: body.metrics.R_proxy ?? null,
-          dH_proxy: body.metrics.dH_proxy ?? null,
-          sampleRate: body.metrics.sampleRate ?? null,
+        timestamp_local: body.timestamp || Date.now(),
+        timestamp_server: Date.now(), // Tiempo absoluto de llegada
+        
+        // 2. Datos de Geolocalización (CRÍTICO PARA TRIANGULACIÓN SÍSMICA)
+        geo: {
+          lat: body.geo?.lat || null,
+          lon: body.geo?.lon || null,
+          acc: body.geo?.acc || null
         },
+
+        // 3. Métricas de Coherencia (Sigma Rules)
+        metrics: {
+          LI: body.metrics?.LI || 0, // Locking Index
+          R: body.metrics?.R || 0,   // Kuramoto
+          dH: body.metrics?.dH || 0, // Entropía
+          aMag: body.metrics?.aMag || 0
+        }
       };
 
+      // ---------------------------------------------------------
+      // ZONA DE PERSISTENCIA (FIREBASE / SUPABASE / MONGODB)
+      // Aquí es donde conectarías tu DB real.
+      // Ejemplo conceptual:
+      // await db.collection('tcds_sensor_data').add(event);
+      // ---------------------------------------------------------
+
+      // Por ahora, guardamos en memoria (últimos 100 eventos)
       events.push(event);
+      if (events.length > 100) events.shift();
 
-      // Limitar a los últimos 1000 registros para no crecer infinito
-      if (events.length > 1000) {
-        events = events.slice(-1000);
-      }
+      // Log de Auditoría (Visible en Vercel Logs)
+      console.log(`[TCDS-INGEST] Nodo: ${event.device_id.slice(0,5)}... | Geo: ${event.geo.lat ? 'OK' : 'N/A'} | LI: ${event.metrics.LI.toFixed(2)}`);
 
-      console.log("Nuevo evento causal:", {
-        device_id: event.device_id,
-        mode: event.mode,
-        LI: event.metrics.LI_proxy,
-        R: event.metrics.R_proxy,
-        dH: event.metrics.dH_proxy,
-      });
+      return res.status(200).json({ ok: true, sync_ts: event.timestamp_server });
 
-      return res.status(200).json({ ok: true });
     } catch (err) {
-      console.error("Error procesando POST /api/reports:", err);
-      return res.status(500).json({ ok: false, error: "Error interno" });
+      console.error("Error en ingesta:", err);
+      return res.status(500).json({ ok: false });
     }
   }
 
+  // Endpoint de consulta simple para depuración
   if (req.method === "GET") {
-    // Agregados básicos por modo
-    const counts = {
-      total: events.length,
-      baseline: 0,
-      ruido: 0,
-      ventana_q: 0,
-      otros: 0,
-    };
-
-    for (const ev of events) {
-      if (ev.mode === "baseline") counts.baseline++;
-      else if (ev.mode === "ruido") counts.ruido++;
-      else if (ev.mode === "ventana_q") counts.ventana_q++;
-      else counts.otros++;
-    }
-
-    // Últimos 50 eventos (más recientes primero)
-    const lastEvents = events
-      .slice(-50)
-      .reverse()
-      .map((ev) => ({
-        device_id: ev.device_id,
-        mode: ev.mode,
-        timestamp: ev.timestamp,
-        timestamp_iso: formatDate(ev.timestamp),
-        aMag: ev.metrics.aMag,
-        tC_proxy: ev.metrics.tC_proxy,
-        LI_proxy: ev.metrics.LI_proxy,
-        R_proxy: ev.metrics.R_proxy,
-        dH_proxy: ev.metrics.dH_proxy,
-        sampleRate: ev.metrics.sampleRate,
-      }));
-
-    return res.status(200).json({
-      ok: true,
-      counts,
-      lastEvents,
+    return res.status(200).json({ 
+      status: "TCDS Ingest Node Online", 
+      cached_events: events.length,
+      latest: events.slice(-5) 
     });
   }
-
-  // Método no soportado
-  return res.status(405).json({ ok: false, error: "Método no permitido" });
 }
