@@ -2,9 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Reloj Causal Humano — TCDS [Filtro Arnold Activo]</title>
+  <title>Reloj Causal Humano — TCDS [Shannon Entropy v1.4]</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Nodo sensor TCDS: Detección de coherencia sísmica con filtrado espectral Q-Driven.">
+  <meta name="description" content="Nodo sensor TCDS: Medición de entropía espectral de Shannon y coherencia Q-Driven.">
   <style>
     :root {
       --bg: #050713; --bg-alt: #0b0f1f; --fg: #f5f7ff;
@@ -81,7 +81,7 @@
     <div class="card">
       <div class="card-title">Módulo de Impacto Sigma (Auditoría TCDS)</div>
       <div style="font-size:12px; opacity:0.8; margin-bottom:8px;">
-        Visualización en tiempo real de las Reglas de Coherencia. El algoritmo <strong>Q-Arnold</strong> diferencia ruido mecánico de señales puras.
+        Auditoría en tiempo real. <strong style="color:var(--accent2)">Shannon Entropy</strong> valida si la señal contiene información estructural o ruido térmico.
       </div>
       
       <div class="sigma-module">
@@ -94,8 +94,8 @@
           <span>Kuramoto</span>
         </div>
         <div class="rule-box" id="ruleEnt">
-          <strong>&Delta;H &lt; -0.1</strong>
-          <span>E-Veto (Entropía)</span>
+          <strong>&Delta;H &lt; -0.5</strong>
+          <span>Shannon (Orden)</span>
         </div>
       </div>
 
@@ -112,7 +112,7 @@
         <div>LI: <strong id="liLive">0.00</strong></div>
         <div>R: <strong id="rLive">0.00</strong></div>
         <div>&Delta;H: <strong id="dHLive">0.00</strong></div>
-        <div>Filtro Arnold: <strong id="qLive" style="color:var(--accent);">--</strong></div>
+        <div>Factor Q: <strong id="qLive" style="color:var(--accent);">--</strong></div>
         <div>Frec. Pico: <strong id="peakLive">0.00</strong> Hz</div>
       </div>
       <div style="display:flex; gap:8px;">
@@ -123,25 +123,31 @@
   </div>
 
   <footer style="text-align:center; font-size:10px; opacity:0.5; margin-top:20px;">
-    Nodo Sensor Distribuido TCDS v1.3 | Genaro Carrasco Ozuna
+    Nodo Sensor Distribuido TCDS v1.4 | Genaro Carrasco Ozuna
   </footer>
 </div>
 
 <script>
-  /* ================= CONFIGURACIÓN ================= */
-  // CONFIRMA QUE ESTA SEA LA RUTA CORRECTA DE TU BACKEND EN VERCEL:
+  /* ================= CONFIGURACIÓN TCDS ================= */
+  // URL del Backend (Vercel / Serverless)
   const REPORT_URL = "https://tcds-reloj-causal.vercel.app/api/reports"; 
   const DEVICE_ID = crypto.randomUUID ? crypto.randomUUID() : 'anon-' + Math.random();
   
   /* ================= VARIABLES DE ESTADO ================= */
   let accelBuffer = [], lastTime = 0;
-  let current_LI = 0, current_R = 0, current_dH = 0, current_aMag = 0;
-  let current_Q = 0; // Factor de nitidez espectral (Arnold)
+  
+  // Variables Métricas TCDS
+  let current_LI = 0;     // Locking Index
+  let current_R = 0;      // Kuramoto Proxy
+  let current_dH = 0;     // Delta Shannon (Entropía Normalizada Inversa)
+  let current_aMag = 0;   // Magnitud Aceleración
+  let current_Q = 0;      // Factor de Calidad (Nitidez del Pico)
   let current_PeakFreq = 0;
   
   let geoData = { lat: null, lon: null, acc: null };
   let timeOffset = 0; 
-  let N_FFT = 256; // Tamaño de ventana para FFT rápida
+  // Ventana FFT: 256 muestras permiten buena resolución en bajas frecuencias
+  let N_FFT = 256; 
 
   /* ================= UI REFERENCES ================= */
   const ruleLI = document.getElementById('ruleLI');
@@ -166,31 +172,28 @@
       },
       (err) => {
         console.warn("Error GPS:", err);
-        geoStatus.textContent = "GPS: Denegado/Error (Nodo sin ubicación)";
+        geoStatus.textContent = "GPS: Denegado (Nodo anónimo)";
         geoStatus.style.color = "var(--danger)";
       },
       { enableHighAccuracy: true }
     );
   }
 
-  /* ================= FFT SIMPLIFICADA (Algoritmo Arnold) ================= */
+  /* ================= ANÁLISIS ESPECTRAL Y ENTROPÍA DE SHANNON ================= */
   function computeSpectralSharpness() {
     if (accelBuffer.length < N_FFT) return;
     
-    // 1. Preparar datos (ventana reciente)
+    // 1. Preparar ventana de datos
     const slice = accelBuffer.slice(-N_FFT);
     const mean = slice.reduce((a,b) => a+b, 0) / N_FFT;
-    
-    // 2. FFT Casera (Radix-2 simple o DFT lenta para 256 es aceptable en JS moderno)
-    // Para optimizar, hacemos una DFT solo de bajas frecuencias (0-20Hz) que son las sismicas
-    // Esto ahorra CPU y batería.
     
     let maxMag = 0;
     let peakFreq = 0;
     let spectrum = [];
+    let totalSpectralPower = 0; 
     
-    // Muestreo aprox 60Hz (común en navegador) -> Nyquist 30Hz
-    // Analizamos bins de interés
+    // 2. DFT DE BANDA ESTRECHA (Sismica/Humana: 0.2Hz - ~7Hz)
+    // Calculamos solo los primeros 30 bins para optimizar CPU en móvil.
     for(let k = 1; k < 30; k++) { 
       let real = 0, imag = 0;
       for(let n = 0; n < N_FFT; n++) {
@@ -201,139 +204,170 @@
       }
       const mag = Math.sqrt(real*real + imag*imag);
       spectrum.push(mag);
+      totalSpectralPower += mag;
       
       if(mag > maxMag) {
         maxMag = mag;
-        peakFreq = k * (60 / N_FFT); // Aprox freq
+        peakFreq = k * (60 / N_FFT); // Asumiendo sampling ~60Hz
       }
     }
     
-    // 3. Algoritmo "Lengua de Arnold" (Q-Factor)
-    // Medimos el ancho del pico a media altura (FWHM)
-    // Si el pico es estrecho -> Q alto -> Coherencia
-    // Si el pico es ancho -> Q bajo -> Ruido
-    
+    // --- A. CÁLCULO DE FACTOR Q (Nitidez del Pico) ---
     if(maxMag < 0.1) {
-        current_Q = 0; // Sin señal
+        current_Q = 0;
+        // Si no hay energía, la entropía es máxima (incertidumbre total) o nula
+        // Para TCDS, silencio = desorden potencial = 0 dH
+        current_dH = 0; 
         return;
     }
 
+    // Estimación de ancho de banda a media potencia (FWHM)
     const halfPower = maxMag * 0.5;
     let widthBins = 0;
-    // Contamos cuántos bins superan la mitad de la potencia
     spectrum.forEach(mag => {
         if(mag > halfPower) widthBins++;
     });
-    
-    // Invertimos el ancho para tener "Nitidez"
-    // 1 bin de ancho = Nitidez 1.0 (Máxima)
-    // 10 bins de ancho = Nitidez 0.1 (Ruido)
     current_Q = widthBins > 0 ? (1.0 / widthBins) : 0;
     current_PeakFreq = peakFreq;
+
+    // --- B. CÁLCULO DE ENTROPÍA DE SHANNON REAL ---
+    // H = - sum( p * log2(p) )
+    let shannonH = 0;
+    if (totalSpectralPower > 0) {
+        for (let mag of spectrum) {
+            const p = mag / totalSpectralPower; // Probabilidad normalizada
+            if (p > 0) {
+                shannonH += -1 * p * Math.log2(p);
+            }
+        }
+    }
+
+    // Normalización TCDS:
+    // Queremos mapear H (0 a log2(N)) a dH (-1 a 0)
+    // H bajo (orden) -> dH cercano a -1
+    // H alto (ruido) -> dH cercano a 0
     
-    // Actualizar UI especifica
+    const maxH = Math.log2(spectrum.length || 1); // Entropía máxima posible (distribución plana)
+    const normalizedH = maxH > 0 ? shannonH / maxH : 1;
+
+    // Mapeo final
+    current_dH = normalizedH - 1.0;
+
+    // --- ACTUALIZACIÓN VISUAL ESPECTRAL ---
     document.getElementById('qLive').textContent = current_Q.toFixed(2);
     document.getElementById('peakLive').textContent = current_PeakFreq.toFixed(1);
     
-    // Mover aguja rosa (Frecuencia)
+    // Aguja de Frecuencia (Magenta)
     const freqAngle = -150 + (Math.min(peakFreq/10, 1) * 300);
     document.getElementById('freqNeedle').setAttribute('transform', `rotate(${freqAngle} 500 400)`);
   }
 
-  /* ================= SINCRONIZACIÓN DE TIEMPO ================= */
+  /* ================= SINCRONIZACIÓN ================= */
   async function syncTime() {
     try {
       timeOffset = 0; 
-      document.getElementById('timeSyncStatus').textContent = "Reloj: Sincronizado (NTP-Sim)";
+      document.getElementById('timeSyncStatus').textContent = "Reloj: Sincronizado (Local)";
     } catch(e) {}
   }
 
-  /* ================= CÁLCULO DE MÉTRICAS TCDS ================= */
+  /* ================= FUSIÓN DE MÉTRICAS TCDS ================= */
   function updateMetrics() {
     if (accelBuffer.length < 32) return;
     
-    // Estadísticas básicas
+    // Estadísticas Temporales (Dominio del Tiempo)
     const slice = accelBuffer.slice(-64);
     const mean = slice.reduce((a,b)=>a+b,0)/slice.length;
     const variance = slice.reduce((a,b)=>a+Math.pow(b-mean,2),0)/slice.length;
     const std = Math.sqrt(variance);
 
-    // --- FUSIÓN DE SENSORES TCDS ---
-    // Usamos el Factor Q (Arnold) para "limpiar" el LI
-    // Si Q es alto, confiamos más en que es una señal coherente.
-    
+    // LI (Locking Index): Estabilidad de la amplitud
     const noiseNorm = Math.min(std / 4, 1);
-    
-    // LI base (inverso del ruido)
     let raw_LI = 1.0 - noiseNorm; 
     
-    // LI Refinado por Arnold: Si hay nitidez espectral, sube el LI
-    // Esto premia las oscilaciones puras (sismo lejano) sobre el ruido caótico (bolsillo)
-    current_LI = (raw_LI * 0.7) + (current_Q * 0.3);
+    // Refinamiento con Factor Q (si el espectro es nítido, confiamos más)
+    current_LI = (raw_LI * 0.6) + (current_Q * 0.4);
     
-    // R (Kuramoto) tiende a 1 si hay orden
+    // R (Kuramoto): Inferencia basada en estabilidad local
     current_R = 0.8 + (0.2 * current_LI); 
     
-    // dH (Entropía) es negativa si hay alto orden
-    current_dH = -0.5 + (1.0 - current_LI); 
+    // NOTA: current_dH ya fue calculado en computeSpectralSharpness usando Shannon.
+    // No lo sobrescribimos aquí.
 
-    // ACTUALIZAR VISUALIZACIÓN DE REGLAS
+    // --- ACTUALIZACIÓN DE REGLAS VISUALES ---
+    
+    // Regla 1: Locking Index
     if (current_LI >= 0.9) ruleLI.className = "rule-box rule-pass";
     else ruleLI.className = "rule-box rule-fail";
 
+    // Regla 2: Kuramoto Proxy
     if (current_R > 0.95) ruleR.className = "rule-box rule-pass";
     else ruleR.className = "rule-box"; 
 
-    if (current_dH < -0.1) ruleEnt.className = "rule-box rule-pass";
+    // Regla 3: Entropía de Shannon (E-Veto)
+    // Umbral más estricto: -0.5 significa que la señal tiene considerable estructura
+    if (current_dH < -0.5) ruleEnt.className = "rule-box rule-pass";
     else ruleEnt.className = "rule-box rule-fail";
 
-    // Textos
+    // --- UI NUMÉRICA ---
     document.getElementById('liLive').textContent = current_LI.toFixed(2);
     document.getElementById('rLive').textContent = current_R.toFixed(2);
-    document.getElementById('dHLive').textContent = current_dH.toFixed(2);
+    document.getElementById('dHLive').textContent = current_dH.toFixed(3);
     
-    // Enviar telemetría (Random sampling para demo, o evento crítico)
-    if (Math.random() < 0.1 || current_LI > 0.9) sendReport(); 
+    // Enviar telemetría si hay coherencia significativa
+    if (current_LI > 0.85 && current_dH < -0.4) sendReport(); 
   }
 
-  /* ================= ENVÍO DE REPORTE ================= */
+  /* ================= ENVÍO DE REPORTE (Injest) ================= */
   function sendReport() {
+    // Throttling simple para no saturar la red (1 reporte cada 5s max)
+    const now = Date.now();
+    if (window.lastReport && (now - window.lastReport < 5000)) return;
+    window.lastReport = now;
+
     const payload = {
       device_id: DEVICE_ID,
-      timestamp: Date.now() + timeOffset,
+      timestamp: now + timeOffset,
       geo: geoData,
       metrics: {
         aMag: current_aMag,
         LI: current_LI,
         R: current_R,
-        dH: current_dH,
-        Q_Arnold: current_Q // Enviamos el nuevo dato al cerebro
+        dH: current_dH, // Valor real de Shannon
+        Q_Arnold: current_Q 
       }
     };
     
     if (navigator.sendBeacon) {
       navigator.sendBeacon(REPORT_URL, JSON.stringify(payload));
     } else {
-      fetch(REPORT_URL, { method: 'POST', body: JSON.stringify(payload) }).catch(e=>{});
+      fetch(REPORT_URL, { 
+        method: 'POST', 
+        body: JSON.stringify(payload),
+        headers: {'Content-Type': 'application/json'}
+      }).catch(e=>{});
     }
   }
 
-  /* ================= SENSORES ================= */
+  /* ================= HANDLERS DE SENSORES ================= */
   function handleMotion(e) {
     const a = e.accelerationIncludingGravity;
     if(!a) return;
+    
+    // Magnitud Vectorial 3D
     const mag = Math.hypot(a.x||0, a.y||0, a.z||0);
     
     accelBuffer.push(mag);
-    if(accelBuffer.length > 512) accelBuffer.shift(); // Buffer más grande para FFT
+    if(accelBuffer.length > 512) accelBuffer.shift(); // Mantener buffer circular
     current_aMag = mag;
     
-    // Aguja t_C
-    const tcAngle = -60 + (Math.min(mag/15, 1) * 120);
+    // Aguja t_C (Cian) - Visualización de Magnitud
+    // Mapeo: 9.8 m/s² (reposo) -> ~0 grados.
+    const normalizedMag = Math.abs(mag - 9.8); 
+    const tcAngle = -60 + (Math.min(normalizedMag/5, 1) * 120);
     document.getElementById('tcNeedle').setAttribute('transform', `rotate(${tcAngle} 500 400)`);
     document.getElementById('magLive').textContent = mag.toFixed(2);
 
-    // Ejecutar análisis espectral cada ~100ms (no en cada frame para rendimiento)
+    // Ejecutar análisis espectral cada ~100ms
     if(Date.now() % 100 < 20) computeSpectralSharpness();
     
     updateMetrics();
@@ -342,12 +376,21 @@
   async function init() {
     getGeolocation();
     syncTime();
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-      await DeviceMotionEvent.requestPermission();
+    
+    // Solicitar permisos iOS 13+
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const permission = await DeviceMotionEvent.requestPermission();
+        if (permission !== 'granted') {
+          alert("Se requiere permiso de acelerómetro para el Reloj Causal.");
+          return;
+        }
+      } catch(e) { console.error(e); }
     }
+    
     window.addEventListener('devicemotion', handleMotion);
     document.getElementById('bigClock').classList.add('ready');
-    document.getElementById('modeLabel').textContent = "NODO ACTIVO (Q-DRIVEN)";
+    document.getElementById('modeLabel').textContent = "NODO ACTIVO (SHANNON)";
   }
 
   document.getElementById('startBtn').onclick = init;
