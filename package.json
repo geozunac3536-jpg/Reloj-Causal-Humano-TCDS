@@ -1,0 +1,8 @@
+{
+  "name": "tcds-reloj-causal",
+  "version": "2.0.0",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "latest"
+  }
+}
