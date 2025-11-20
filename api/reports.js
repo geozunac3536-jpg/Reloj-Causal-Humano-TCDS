@@ -1,71 +1,67 @@
 // api/reports.js
-// Endpoint de Ingesta TCDS - Nodo Geo-Sincronizado
+// Ingesta de datos de la Red de Sensores TCDS
+// Corrección: Exporta la memoria y alinea las claves JSON con index.html
 
-// Simulamos persistencia temporal para ver datos en /api/query sin base de datos real aún
-let events = [];
+// Memoria volátil compartida (se mantiene mientras la instancia esté viva)
+export let events = [];
 
 export default async function handler(req, res) {
-  // Headers CORS para permitir que el index.html (Github Pages) envíe datos
+  // CORS: Permitir que cualquier origen (tu reloj) envíe datos
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // GET: Para depuración rápida en navegador
+  if (req.method === "GET") {
+    return res.status(200).json({
+      status: "TCDS Ingest Node Online",
+      cached_events: events.length,
+      latest: events.slice(-5)
+    });
+  }
 
   if (req.method === "POST") {
     try {
       const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-      // 1. Extracción de Datos TCDS
+      // Validación mínima
+      if (!body || !body.metrics) {
+        return res.status(400).json({ ok: false, error: "Payload inválido" });
+      }
+
+      // Reconstrucción de t_C (Tiempo Causal) basado en aMag si no viene explícito
+      // Mapeo simplificado: 0 a 20 m/s² -> -1 a 1
+      const aMag = body.metrics.aMag || 0;
+      const tC_derived = Math.min(aMag / 10, 1) * 2 - 1;
+
       const event = {
         device_id: body.device_id || "anon",
-        timestamp_local: body.timestamp || Date.now(),
-        timestamp_server: Date.now(), // Tiempo absoluto de llegada
-        
-        // 2. Datos de Geolocalización (CRÍTICO PARA TRIANGULACIÓN SÍSMICA)
-        geo: {
-          lat: body.geo?.lat || null,
-          lon: body.geo?.lon || null,
-          acc: body.geo?.acc || null
-        },
-
-        // 3. Métricas de Coherencia (Sigma Rules)
+        timestamp: body.timestamp || Date.now(),
+        receivedAt: Date.now(),
+        geo: body.geo || {},
         metrics: {
-          LI: body.metrics?.LI || 0, // Locking Index
-          R: body.metrics?.R || 0,   // Kuramoto
-          dH: body.metrics?.dH || 0, // Entropía
-          aMag: body.metrics?.aMag || 0
+          aMag: aMag,
+          // Alineación con index.html (sin _proxy)
+          LI: body.metrics.LI ?? 0,
+          R: body.metrics.R ?? 0,
+          dH: body.metrics.dH ?? 0,
+          tC: body.metrics.tC ?? tC_derived, 
+          Q_Arnold: body.metrics.Q_Arnold ?? 0
         }
       };
 
-      // ---------------------------------------------------------
-      // ZONA DE PERSISTENCIA (FIREBASE / SUPABASE / MONGODB)
-      // Aquí es donde conectarías tu DB real.
-      // Ejemplo conceptual:
-      // await db.collection('tcds_sensor_data').add(event);
-      // ---------------------------------------------------------
-
-      // Por ahora, guardamos en memoria (últimos 100 eventos)
+      // Persistencia en memoria (Buffer circular de 1000 eventos)
       events.push(event);
-      if (events.length > 100) events.shift();
+      if (events.length > 1000) events.shift();
 
-      // Log de Auditoría (Visible en Vercel Logs)
-      console.log(`[TCDS-INGEST] Nodo: ${event.device_id.slice(0,5)}... | Geo: ${event.geo.lat ? 'OK' : 'N/A'} | LI: ${event.metrics.LI.toFixed(2)}`);
+      console.log(`[TCDS-INGEST] Nodo: ${event.device_id.slice(0,5)} | LI: ${event.metrics.LI.toFixed(2)} | Q: ${event.metrics.Q_Arnold.toFixed(2)}`);
 
-      return res.status(200).json({ ok: true, sync_ts: event.timestamp_server });
-
+      return res.status(200).json({ ok: true });
     } catch (err) {
-      console.error("Error en ingesta:", err);
+      console.error("Error procesando reporte:", err);
       return res.status(500).json({ ok: false });
     }
-  }
-
-  // Endpoint de consulta simple para depuración
-  if (req.method === "GET") {
-    return res.status(200).json({ 
-      status: "TCDS Ingest Node Online", 
-      cached_events: events.length,
-      latest: events.slice(-5) 
-    });
   }
 }
