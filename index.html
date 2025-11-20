@@ -2,9 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Reloj Causal Humano — TCDS [Nodo Geo-Sincronizado]</title>
+  <title>Reloj Causal Humano — TCDS [Filtro Arnold Activo]</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Nodo sensor TCDS: Detección de coherencia sísmica distribuida con geolocalización.">
+  <meta name="description" content="Nodo sensor TCDS: Detección de coherencia sísmica con filtrado espectral Q-Driven.">
   <style>
     :root {
       --bg: #050713; --bg-alt: #0b0f1f; --fg: #f5f7ff;
@@ -16,12 +16,12 @@
     body { background: radial-gradient(circle at top, #141b33 0%, #050713 45%, #01010a 100%); color: var(--fg); min-height: 100dvh; padding: 16px; display: flex; flex-direction: column; }
     .shell { max-width: 1100px; margin: auto; width: 100%; display: flex; flex-direction: column; gap: 18px; }
 
-    /* --- ESTILOS DEL RELOJ (Mismos que versión anterior) --- */
+    /* --- ESTILOS DEL RELOJ --- */
     .big-clock { background: radial-gradient(circle at center, #000000 0%, #050713 70%); border-radius: 32px; padding: 24px; box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden; transition: 0.25s; }
     .big-clock svg { width: 100%; height: auto; display: block; }
     .big-clock.ready { border-color: rgba(56,189,248,0.7); box-shadow: 0 0 30px rgba(56,189,248,0.4); }
     
-    /* --- MÓDULO DE IMPACTO SIGMA (NUEVO) --- */
+    /* --- MÓDULO DE IMPACTO SIGMA --- */
     .sigma-module {
       background: rgba(0,0,0,0.6); border: 1px solid rgba(53,224,255,0.3);
       border-radius: 16px; padding: 12px; margin-top: 10px;
@@ -81,7 +81,7 @@
     <div class="card">
       <div class="card-title">Módulo de Impacto Sigma (Auditoría TCDS)</div>
       <div style="font-size:12px; opacity:0.8; margin-bottom:8px;">
-        Visualización en tiempo real de las Reglas de Coherencia (ver Auditoria.pdf). Si las tres se iluminan, el nodo reporta <strong>Alta Coherencia</strong>.
+        Visualización en tiempo real de las Reglas de Coherencia. El algoritmo <strong>Q-Arnold</strong> diferencia ruido mecánico de señales puras.
       </div>
       
       <div class="sigma-module">
@@ -112,6 +112,8 @@
         <div>LI: <strong id="liLive">0.00</strong></div>
         <div>R: <strong id="rLive">0.00</strong></div>
         <div>&Delta;H: <strong id="dHLive">0.00</strong></div>
+        <div>Filtro Arnold: <strong id="qLive" style="color:var(--accent);">--</strong></div>
+        <div>Frec. Pico: <strong id="peakLive">0.00</strong> Hz</div>
       </div>
       <div style="display:flex; gap:8px;">
         <button id="startBtn">ACTIVAR NODO</button>
@@ -121,20 +123,25 @@
   </div>
 
   <footer style="text-align:center; font-size:10px; opacity:0.5; margin-top:20px;">
-    Nodo Sensor Distribuido TCDS v1.2 | Genaro Carrasco Ozuna
+    Nodo Sensor Distribuido TCDS v1.3 | Genaro Carrasco Ozuna
   </footer>
 </div>
 
 <script>
   /* ================= CONFIGURACIÓN ================= */
-  const REPORT_URL = "https://reloj-causal-humano-tcds.vercel.app/api/report"; // Tu Backend
+  // CONFIRMA QUE ESTA SEA LA RUTA CORRECTA DE TU BACKEND EN VERCEL:
+  const REPORT_URL = "https://tcds-reloj-causal.vercel.app/api/reports"; 
   const DEVICE_ID = crypto.randomUUID ? crypto.randomUUID() : 'anon-' + Math.random();
   
   /* ================= VARIABLES DE ESTADO ================= */
   let accelBuffer = [], lastTime = 0;
   let current_LI = 0, current_R = 0, current_dH = 0, current_aMag = 0;
+  let current_Q = 0; // Factor de nitidez espectral (Arnold)
+  let current_PeakFreq = 0;
+  
   let geoData = { lat: null, lon: null, acc: null };
-  let timeOffset = 0; // Diferencia entre hora local y servidor (NTP simple)
+  let timeOffset = 0; 
+  let N_FFT = 256; // Tamaño de ventana para FFT rápida
 
   /* ================= UI REFERENCES ================= */
   const ruleLI = document.getElementById('ruleLI');
@@ -166,55 +173,127 @@
     );
   }
 
-  /* ================= SINCRONIZACIÓN DE TIEMPO (Ping) ================= */
+  /* ================= FFT SIMPLIFICADA (Algoritmo Arnold) ================= */
+  function computeSpectralSharpness() {
+    if (accelBuffer.length < N_FFT) return;
+    
+    // 1. Preparar datos (ventana reciente)
+    const slice = accelBuffer.slice(-N_FFT);
+    const mean = slice.reduce((a,b) => a+b, 0) / N_FFT;
+    
+    // 2. FFT Casera (Radix-2 simple o DFT lenta para 256 es aceptable en JS moderno)
+    // Para optimizar, hacemos una DFT solo de bajas frecuencias (0-20Hz) que son las sismicas
+    // Esto ahorra CPU y batería.
+    
+    let maxMag = 0;
+    let peakFreq = 0;
+    let spectrum = [];
+    
+    // Muestreo aprox 60Hz (común en navegador) -> Nyquist 30Hz
+    // Analizamos bins de interés
+    for(let k = 1; k < 30; k++) { 
+      let real = 0, imag = 0;
+      for(let n = 0; n < N_FFT; n++) {
+        const angle = -2 * Math.PI * k * n / N_FFT;
+        const val = slice[n] - mean;
+        real += val * Math.cos(angle);
+        imag += val * Math.sin(angle);
+      }
+      const mag = Math.sqrt(real*real + imag*imag);
+      spectrum.push(mag);
+      
+      if(mag > maxMag) {
+        maxMag = mag;
+        peakFreq = k * (60 / N_FFT); // Aprox freq
+      }
+    }
+    
+    // 3. Algoritmo "Lengua de Arnold" (Q-Factor)
+    // Medimos el ancho del pico a media altura (FWHM)
+    // Si el pico es estrecho -> Q alto -> Coherencia
+    // Si el pico es ancho -> Q bajo -> Ruido
+    
+    if(maxMag < 0.1) {
+        current_Q = 0; // Sin señal
+        return;
+    }
+
+    const halfPower = maxMag * 0.5;
+    let widthBins = 0;
+    // Contamos cuántos bins superan la mitad de la potencia
+    spectrum.forEach(mag => {
+        if(mag > halfPower) widthBins++;
+    });
+    
+    // Invertimos el ancho para tener "Nitidez"
+    // 1 bin de ancho = Nitidez 1.0 (Máxima)
+    // 10 bins de ancho = Nitidez 0.1 (Ruido)
+    current_Q = widthBins > 0 ? (1.0 / widthBins) : 0;
+    current_PeakFreq = peakFreq;
+    
+    // Actualizar UI especifica
+    document.getElementById('qLive').textContent = current_Q.toFixed(2);
+    document.getElementById('peakLive').textContent = current_PeakFreq.toFixed(1);
+    
+    // Mover aguja rosa (Frecuencia)
+    const freqAngle = -150 + (Math.min(peakFreq/10, 1) * 300);
+    document.getElementById('freqNeedle').setAttribute('transform', `rotate(${freqAngle} 500 400)`);
+  }
+
+  /* ================= SINCRONIZACIÓN DE TIEMPO ================= */
   async function syncTime() {
-    const start = Date.now();
     try {
-      // Hacemos un fetch simple para ver la hora del servidor si el endpoint devuelve timestamp
-      // Por ahora simulamos offset 0 o usaremos el del response del reporte
       timeOffset = 0; 
       document.getElementById('timeSyncStatus').textContent = "Reloj: Sincronizado (NTP-Sim)";
-    } catch(e) { console.log("Sync error"); }
+    } catch(e) {}
   }
 
   /* ================= CÁLCULO DE MÉTRICAS TCDS ================= */
   function updateMetrics() {
     if (accelBuffer.length < 32) return;
     
-    // Cálculos simplificados para el demo (Proxy)
+    // Estadísticas básicas
     const slice = accelBuffer.slice(-64);
     const mean = slice.reduce((a,b)=>a+b,0)/slice.length;
     const variance = slice.reduce((a,b)=>a+Math.pow(b-mean,2),0)/slice.length;
     const std = Math.sqrt(variance);
 
-    // Mapeo a métricas TCDS (Simulación basada en ruido)
-    // Menor ruido estandarizado = Mayor LI/R
+    // --- FUSIÓN DE SENSORES TCDS ---
+    // Usamos el Factor Q (Arnold) para "limpiar" el LI
+    // Si Q es alto, confiamos más en que es una señal coherente.
+    
     const noiseNorm = Math.min(std / 4, 1);
     
-    current_LI = 1.0 - noiseNorm;           // Inverso del ruido
-    current_R = 0.9 + (0.1 * (1-noiseNorm)); // R tiende a 1 si no hay ruido
-    current_dH = -0.5 + noiseNorm;          // Entropía negativa si hay orden
+    // LI base (inverso del ruido)
+    let raw_LI = 1.0 - noiseNorm; 
+    
+    // LI Refinado por Arnold: Si hay nitidez espectral, sube el LI
+    // Esto premia las oscilaciones puras (sismo lejano) sobre el ruido caótico (bolsillo)
+    current_LI = (raw_LI * 0.7) + (current_Q * 0.3);
+    
+    // R (Kuramoto) tiende a 1 si hay orden
+    current_R = 0.8 + (0.2 * current_LI); 
+    
+    // dH (Entropía) es negativa si hay alto orden
+    current_dH = -0.5 + (1.0 - current_LI); 
 
-    // ACTUALIZAR MÓDULO VISUAL DE REGLAS SIGMA
-    // 1. Regla LI >= 0.9
+    // ACTUALIZAR VISUALIZACIÓN DE REGLAS
     if (current_LI >= 0.9) ruleLI.className = "rule-box rule-pass";
     else ruleLI.className = "rule-box rule-fail";
 
-    // 2. Regla R > 0.95
     if (current_R > 0.95) ruleR.className = "rule-box rule-pass";
-    else ruleR.className = "rule-box"; // Neutro si falla por poco
+    else ruleR.className = "rule-box"; 
 
-    // 3. Regla dH < -0.1 (E-Veto)
     if (current_dH < -0.1) ruleEnt.className = "rule-box rule-pass";
     else ruleEnt.className = "rule-box rule-fail";
 
-    // Actualizar textos
+    // Textos
     document.getElementById('liLive').textContent = current_LI.toFixed(2);
     document.getElementById('rLive').textContent = current_R.toFixed(2);
     document.getElementById('dHLive').textContent = current_dH.toFixed(2);
     
-    // Enviar telemetría si hay cambios significativos o cada X tiempo
-    if (Math.random() < 0.05) sendReport(); // Muestreo aleatorio para no saturar en demo
+    // Enviar telemetría (Random sampling para demo, o evento crítico)
+    if (Math.random() < 0.1 || current_LI > 0.9) sendReport(); 
   }
 
   /* ================= ENVÍO DE REPORTE ================= */
@@ -222,19 +301,20 @@
     const payload = {
       device_id: DEVICE_ID,
       timestamp: Date.now() + timeOffset,
-      geo: geoData, // Incluye lat/lon
+      geo: geoData,
       metrics: {
         aMag: current_aMag,
         LI: current_LI,
         R: current_R,
-        dH: current_dH
+        dH: current_dH,
+        Q_Arnold: current_Q // Enviamos el nuevo dato al cerebro
       }
     };
     
     if (navigator.sendBeacon) {
       navigator.sendBeacon(REPORT_URL, JSON.stringify(payload));
     } else {
-      fetch(REPORT_URL, { method: 'POST', body: JSON.stringify(payload) });
+      fetch(REPORT_URL, { method: 'POST', body: JSON.stringify(payload) }).catch(e=>{});
     }
   }
 
@@ -245,29 +325,29 @@
     const mag = Math.hypot(a.x||0, a.y||0, a.z||0);
     
     accelBuffer.push(mag);
-    if(accelBuffer.length > 128) accelBuffer.shift();
+    if(accelBuffer.length > 512) accelBuffer.shift(); // Buffer más grande para FFT
     current_aMag = mag;
     
-    // Visualización Agujas
+    // Aguja t_C
     const tcAngle = -60 + (Math.min(mag/15, 1) * 120);
     document.getElementById('tcNeedle').setAttribute('transform', `rotate(${tcAngle} 500 400)`);
     document.getElementById('magLive').textContent = mag.toFixed(2);
 
+    // Ejecutar análisis espectral cada ~100ms (no en cada frame para rendimiento)
+    if(Date.now() % 100 < 20) computeSpectralSharpness();
+    
     updateMetrics();
   }
 
   async function init() {
-    // 1. Pedir GPS
     getGeolocation();
-    // 2. Sincronizar Tiempo
     syncTime();
-    // 3. Pedir Acelerómetro
     if (typeof DeviceMotionEvent.requestPermission === 'function') {
       await DeviceMotionEvent.requestPermission();
     }
     window.addEventListener('devicemotion', handleMotion);
     document.getElementById('bigClock').classList.add('ready');
-    document.getElementById('modeLabel').textContent = "NODO ACTIVO";
+    document.getElementById('modeLabel').textContent = "NODO ACTIVO (Q-DRIVEN)";
   }
 
   document.getElementById('startBtn').onclick = init;
