@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Panel Global — Reloj Causal Humano TCDS</title>
+  <title>Panel Global — Reloj Causal TCDS [DB Persistente]</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
@@ -34,18 +34,25 @@
       gap: 18px;
     }
 
+    header {
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 16px;
+    }
+
     .title {
       font-size: 22px;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      opacity: 0.9;
+      color: var(--accent);
     }
 
     .subtitle {
       font-size: 13px;
       opacity: 0.8;
       margin-top: 6px;
+      max-width: 600px;
+      line-height: 1.4;
     }
 
     .grid {
@@ -55,289 +62,274 @@
     }
 
     @media (max-width: 840px) {
-      .grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
+      .grid { grid-template-columns: minmax(0, 1fr); }
     }
 
     .card {
       background: var(--bg-alt);
       border-radius: var(--card-radius);
-      padding: 16px;
+      padding: 20px;
       box-shadow: var(--shadow-soft);
       border: 1px solid rgba(255,255,255,0.06);
     }
 
     .card-title {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.9;
-      margin-bottom: 8px;
+      letter-spacing: 0.1em;
+      color: var(--accent2);
+      margin-bottom: 12px;
     }
 
     .kpi-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 6px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
     }
 
     .kpi {
-      flex: 1 1 120px;
-      background: radial-gradient(circle at top, rgba(53,224,255,0.16), #020617);
-      border-radius: 14px;
-      padding: 10px 12px;
-      border: 1px solid rgba(148,163,184,0.45);
-      font-size: 11px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      text-align: center;
     }
 
     .kpi-label {
-      opacity: 0.78;
+      font-size: 10px;
+      opacity: 0.6;
+      text-transform: uppercase;
       margin-bottom: 4px;
     }
 
     .kpi-value {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 600;
+      color: var(--fg);
     }
 
     .kpi-tag {
-      font-size: 10px;
+      font-size: 9px;
+      opacity: 0.5;
       margin-top: 2px;
-      opacity: 0.7;
     }
 
     canvas {
       width: 100%;
       max-width: 100%;
       border-radius: 14px;
-      background: radial-gradient(circle at top, #020617 0, #020617 60%, #000 100%);
-      border: 1px solid rgba(148,163,184,0.35);
+      background: rgba(0,0,0,0.3);
       margin-top: 8px;
     }
 
     .status {
+      font-size: 12px;
+      margin-top: 12px;
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      border-left: 3px solid #555;
+    }
+    
+    .status span { font-weight: 700; }
+    .status-ok { color: var(--ok); border-color: var(--ok); }
+    .status-bad { color: var(--danger); border-color: var(--danger); }
+    .status-wait { color: var(--accent); border-color: var(--accent); }
+
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
       font-size: 11px;
-      opacity: 0.8;
-      margin-top: 6px;
+      color: var(--accent);
     }
-
-    .status span {
-      font-weight: 600;
-    }
-
-    .status-ok { color: var(--ok); }
-    .status-bad { color: var(--danger); }
-
-    .footer {
-      font-size: 10px;
-      opacity: 0.65;
-      margin-top: 6px;
-    }
-
-    a { color: var(--accent); }
   </style>
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="shell">
   <header>
-    <div class="title">Panel Global — Reloj Causal Humano TCDS</div>
+    <div class="title">Panel de Control TCDS</div>
     <div class="subtitle">
-      Cada dispositivo actúa como un coherencímetro local y envía Σ-metrics a la API.
-      Aquí ves el estado agregado de la red (t_C, LI, R, ΔH, nodos activos).
+      Monitor de Coherencia Global. Visualización de datos persistentes de Entropía de Shannon ($\Delta H$) y Sincronización de Fase ($LI$) almacenados en el tejido digital (Supabase).
     </div>
   </header>
 
   <div class="grid">
-    <!-- Métricas instantáneas -->
     <section class="card">
-      <div class="card-title">Estado Σ-metrics (últimos minutos)</div>
+      <div class="card-title">Estado de la Red (Promedios Históricos)</div>
       <div class="kpi-row">
         <div class="kpi">
-          <div class="kpi-label">t_C medio</div>
-          <div class="kpi-value" id="kpi_tc">–</div>
-          <div class="kpi-tag">Gradiente causal agregado</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">LI medio</div>
-          <div class="kpi-value" id="kpi_li">–</div>
-          <div class="kpi-tag">Índice de locking</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">R medio</div>
-          <div class="kpi-value" id="kpi_r">–</div>
-          <div class="kpi-tag">Correlación Σ</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">ΔH medio</div>
-          <div class="kpi-value" id="kpi_dh">–</div>
-          <div class="kpi-tag">Entropía (E-Veto)</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Nodos activos</div>
-          <div class="kpi-value" id="kpi_nodes">–</div>
+          <div class="kpi-label">Nodos Activos</div>
+          <div class="kpi-value" id="kpi_nodes">0</div>
           <div class="kpi-tag">Dispositivos reportando</div>
         </div>
+        <div class="kpi">
+          <div class="kpi-label">$\Delta H$ Medio</div>
+          <div class="kpi-value" id="kpi_dh">--</div>
+          <div class="kpi-tag">Entropía Shannon</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">LI Medio</div>
+          <div class="kpi-value" id="kpi_li">--</div>
+          <div class="kpi-tag">Locking Index</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">R Medio</div>
+          <div class="kpi-value" id="kpi_r">--</div>
+          <div class="kpi-tag">Kuramoto Proxy</div>
+        </div>
       </div>
-      <div class="status" id="statusText">
-        Esperando primeros datos de la API…
+      
+      <div id="statusBox" class="status status-wait">
+        <span>CONECTANDO...</span> Esperando respuesta de la API TCDS.
       </div>
     </section>
 
-    <!-- Historial t_C / ΔH -->
     <section class="card">
-      <div class="card-title">Historial reciente t_C y ΔH</div>
-      <canvas id="chartTcDh" height="180"></canvas>
-      <div class="footer">
-        Fuente de datos: <code>/api/query</code> de tu backend TCDS.
+      <div class="card-title">Evolución Temporal ($\Delta H$ vs $LI$)</div>
+      <div style="height: 200px; position: relative;">
+        <canvas id="chartTcDh"></canvas>
+      </div>
+      <div style="font-size: 10px; opacity: 0.5; margin-top: 8px; text-align: right;">
+        Fuente: <code>/api/reports (GET)</code> | Muestra: Últimos 50 eventos
       </div>
     </section>
   </div>
 
   <section class="card">
-    <div class="card-title">Detalles técnicos</div>
-    <div class="status">
-      El panel realiza una consulta cada <span>10 s</span> a la URL:
-      <code id="apiUrlLabel"></code>.
-      Ajusta la constante <code>API_BASE</code> en el script si despliegas la API en otra ruta.
+    <div class="card-title">Diagnóstico de Conexión</div>
+    <div style="font-size: 11px; opacity: 0.8;">
+      Endpoint configurado: <code id="apiUrlLabel">...</code><br>
+      <span id="lastUpdate">Última actualización: Nunca</span>
     </div>
   </section>
 
 </div>
 
 <script>
-  // Cambia esto por la URL real de tu backend (sin la parte /api)
-  // Ejemplos:
-  //  - 'https://tcds-reloj-api.vercel.app'
-  //  - 'https://tu-dominio-backend.com'
-  const API_BASE = 'https://TU_BACKEND_AQUI';
+  /* ================= CONFIGURACIÓN ================= */
+  // IMPORTANTE: Cambia esto a la URL de tu proyecto Vercel real
+  const API_BASE = 'https://tcds-reloj-causal.vercel.app'; 
+  
+  /* ================= UI REFS ================= */
+  const kpiNodes = document.getElementById('kpi_nodes');
+  const kpiDh = document.getElementById('kpi_dh');
+  const kpiLi = document.getElementById('kpi_li');
+  const kpiR = document.getElementById('kpi_r');
+  const statusBox = document.getElementById('statusBox');
+  const apiUrlLabel = document.getElementById('apiUrlLabel');
+  const lastUpdateLabel = document.getElementById('lastUpdate');
 
-  document.getElementById('apiUrlLabel').textContent = API_BASE + '/api/query';
+  apiUrlLabel.textContent = API_BASE + '/api/reports';
 
-  // Referencias a KPIs
-  const kpiTcEl    = document.getElementById('kpi_tc');
-  const kpiLiEl    = document.getElementById('kpi_li');
-  const kpiREl     = document.getElementById('kpi_r');
-  const kpiDhEl    = document.getElementById('kpi_dh');
-  const kpiNodesEl = document.getElementById('kpi_nodes');
-  const statusText = document.getElementById('statusText');
-
-  // Datos para la gráfica
-  const chartLabels = [];
-  const chartTcData = [];
-  const chartDhData = [];
-
+  /* ================= CHART CONFIG ================= */
   const ctx = document.getElementById('chartTcDh').getContext('2d');
   const chartTcDh = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartLabels,
+      labels: [],
       datasets: [
         {
-          label: 't_C medio',
-          data: chartTcData,
+          label: 'Entropía Shannon (ΔH)',
+          data: [],
+          borderColor: '#ff6b6b', // Rojo (Peligro/Ruido)
+          backgroundColor: 'rgba(255, 107, 107, 0.1)',
           borderWidth: 2,
-          fill: false,
-          tension: 0.2
+          tension: 0.4,
+          yAxisID: 'y'
         },
         {
-          label: 'ΔH medio',
-          data: chartDhData,
+          label: 'Locking Index (LI)',
+          data: [],
+          borderColor: '#35e0ff', // Cian (Orden TCDS)
+          backgroundColor: 'rgba(53, 224, 255, 0.1)',
           borderWidth: 2,
-          fill: false,
-          tension: 0.2
+          tension: 0.4,
+          yAxisID: 'y'
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: {
-        x: {
-          ticks: { color: '#9ca3af', maxTicksLimit: 6 }
-        },
-        y: {
-          ticks: { color: '#9ca3af' }
-        }
-      },
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          labels: { color: '#e5e7eb', font: { size: 11 } }
+        legend: { labels: { color: '#ccc', font: {size:10} } }
+      },
+      scales: {
+        x: { display: false }, // Ocultar etiquetas X para limpieza visual
+        y: {
+          min: -1, max: 1,
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#888', font: {size:9} }
         }
       }
     }
   });
 
-  function updateKpi(el, val, digits=3) {
-    el.textContent = (val === null || val === undefined || isNaN(val))
-      ? '–'
-      : val.toFixed(digits);
-  }
-
-  function interpretStatus(payload) {
-    if (!payload || typeof payload !== 'object') return;
-
-    const entropyOk = payload.entropy_ok_ratio ?? 0;
-    const lockingOk = payload.locking_ok_ratio ?? 0;
-
-    if (entropyOk >= 0.7 && lockingOk >= 0.7) {
-      statusText.innerHTML =
-        '<span class="status-ok">Dominio Q-driven</span>: ' +
-        'mayoría de nodos con ΔH ≤ −0.2 y locking estable.';
-    } else if (entropyOk <= 0.3 && lockingOk <= 0.3) {
-      statusText.innerHTML =
-        '<span class="status-bad">Dominio φ-driven</span>: ' +
-        'predomina el ruido; buena línea base para calibrar.';
+  /* ================= LOGICA DE DATOS ================= */
+  
+  function interpretCoherence(dh, li) {
+    // Lógica TCDS: Queremos Entropía Baja (dH negativo) y Locking Alto (LI positivo)
+    if (dh <= -0.4 && li >= 0.8) {
+      statusBox.className = "status status-ok";
+      statusBox.innerHTML = `<span>SISTEMA COHERENTE:</span> La red muestra estructura intencional (Shannon Order).`;
+    } else if (dh > -0.2) {
+      statusBox.className = "status status-bad";
+      statusBox.innerHTML = `<span>RUIDO TÉRMICO:</span> Predominio de entropía. Sin señal causal clara.`;
     } else {
-      statusText.innerHTML =
-        'Régimen mixto: coexistencia de ventanas φ-driven y Q-driven. ' +
-        'Útil para estudiar transiciones de coherencia.';
+      statusBox.className = "status status-wait";
+      statusBox.innerHTML = `<span>ESTADO TRANSICIONAL:</span> Datos mixtos. Posible calibración en curso.`;
     }
   }
 
-  async function pollGlobalMetrics() {
+  async function fetchData() {
     try {
-      const res = await fetch(API_BASE + '/api/query');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      // Consumimos el GET del api/reports que conecta a Supabase
+      const res = await fetch(`${API_BASE}/api/reports`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
       const data = await res.json();
+      
+      // 1. Actualizar KPIs (Medias Globales)
+      kpiNodes.textContent = data.active_nodes || 0;
+      kpiDh.textContent = (data.dh_mean || 0).toFixed(3);
+      kpiLi.textContent = (data.li_mean || 0).toFixed(2);
+      kpiR.textContent = (data.r_mean || 0).toFixed(2);
 
-      // KPIs instantáneos
-      updateKpi(kpiTcEl, data.tc_mean);
-      updateKpi(kpiLiEl, data.li_mean, 2);
-      updateKpi(kpiREl,  data.r_mean, 2);
-      updateKpi(kpiDhEl, data.dh_mean, 3);
-      kpiNodesEl.textContent = data.active_nodes ?? '0';
-
-      interpretStatus(data);
-
-      // Historial
-      const label = new Date(data.timestamp || Date.now()).toLocaleTimeString();
-      chartLabels.push(label);
-      chartTcData.push(data.tc_mean ?? 0);
-      chartDhData.push(data.dh_mean ?? 0);
-
-      // Limitar puntos
-      if (chartLabels.length > 30) {
-        chartLabels.shift();
-        chartTcData.shift();
-        chartDhData.shift();
+      // 2. Actualizar Gráfica con Historial Real
+      // La API devuelve "latest_raw" ordenado descendente (más nuevo primero)
+      // Para la gráfica necesitamos ascendente (antiguo -> nuevo)
+      if (data.latest_raw && Array.isArray(data.latest_raw)) {
+        const history = [...data.latest_raw].reverse();
+        
+        chartTcDh.data.labels = history.map(e => new Date(e.time).toLocaleTimeString());
+        chartTcDh.data.datasets[0].data = history.map(e => e.metrics.dH);
+        chartTcDh.data.datasets[1].data = history.map(e => e.metrics.LI);
+        
+        chartTcDh.update();
       }
-      chartTcDh.update('none');
+
+      // 3. Interpretar Estado
+      interpretCoherence(data.dh_mean, data.li_mean);
+      
+      lastUpdateLabel.textContent = `Última actualización: ${new Date().toLocaleTimeString()}`;
+
     } catch (err) {
-      console.error('Error consultando /api/query', err);
-      statusText.innerHTML =
-        '<span class="status-bad">Sin conexión con la API.</span> ' +
-        'Revisar URL de backend o CORS.';
+      console.error("Error fetching TCDS data:", err);
+      statusBox.className = "status status-bad";
+      statusBox.innerHTML = `<span>ERROR DE CONEXIÓN:</span> No se pudo leer la Base de Datos TCDS.`;
     }
   }
 
-  // Primera consulta al cargar y luego cada 10 s
-  pollGlobalMetrics();
-  setInterval(pollGlobalMetrics, 10000);
+  // Iniciar ciclo de actualización (cada 5 segundos)
+  fetchData();
+  setInterval(fetchData, 5000);
+
 </script>
 </body>
 </html>
