@@ -41,6 +41,23 @@
     transform: rotate(300deg);
   }
 }
+@keyframes rotate-led {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotate-led-inverse {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
 
     :root {
       --bg: #030413;
@@ -314,6 +331,23 @@
       50%  { r: 18; opacity: 1; }
       100% { r: 12; opacity: 0.55; }
     }
+@keyframes rotate-led {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotate-led-inverse {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
 
     footer {
       text-align: center;
