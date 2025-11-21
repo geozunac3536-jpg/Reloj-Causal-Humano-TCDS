@@ -1,107 +1,67 @@
 // api/reports.js
-// Ingesta TCDS v2.0 - Conexión a Persistencia PostgreSQL (Supabase)
-import { createClient } from '@supabase/supabase-js';
+// CEREBRO DE INGESTA (Memoria Compartida)
+// Función: Recibe datos del sensor, los guarda en RAM y permite auditoría.
 
-// Configuración de conexión (Usa Variables de Entorno en Vercel)
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// 1. Exportamos la memoria 'events' para que query.js pueda leerla
+export let events = [];
 
 export default async function handler(req, res) {
-  // CORS: Permitir que cualquier nodo (GitHub Pages) envíe datos
+  // CORS: Permite que tu reloj (frontend) envíe datos desde cualquier lugar
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // ---------------------------------------------------------
-  // POST: Guardar datos del Reloj Causal en la BD
-  // ---------------------------------------------------------
+  // --- POST: Recibir datos del Nodo (Tu Celular) ---
   if (req.method === "POST") {
     try {
       const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-      // 1. Validación Básica TCDS
+      // Validación básica de seguridad
       if (!body || !body.metrics) {
-        return res.status(400).json({ error: "Payload sin métricas causales" });
+        return res.status(400).json({ ok: false, error: "Datos incompletos" });
       }
 
-      // 2. Mapeo de Datos (JSON Frontend -> Columnas SQL)
-      const eventData = {
-        device_id: body.device_id || "unknown-node",
-        client_timestamp: body.timestamp,
-        
-        // Geodesia
-        geo_lat: body.geo?.lat || null,
-        geo_lon: body.geo?.lon || null,
-        geo_acc: body.geo?.acc || null,
+      // Reconstrucción de t_C si falta (para el dashboard visual)
+      const aMag = body.metrics.aMag || 0;
+      const tC_derived = Math.min(aMag / 10, 1) * 2 - 1;
 
-        // Métricas Físicas (Asegurando tipos correctos)
-        li: parseFloat(body.metrics.LI) || 0,
-        r_kuramoto: parseFloat(body.metrics.R) || 0,
-        dh_shannon: parseFloat(body.metrics.dH) || 0, // Dato Crítico
-        q_arnold: parseFloat(body.metrics.Q_Arnold) || 0,
-        amag: parseFloat(body.metrics.aMag) || 0,
-        
-        // Auditoría
-        ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+      const event = {
+        device_id: body.device_id || "anon",
+        timestamp: body.timestamp || Date.now(),
+        receivedAt: Date.now(),
+        geo: body.geo || {}, // Guarda coordenadas GPS
+        metrics: {
+          aMag: aMag,
+          // Aquí alineamos los nombres con tu index.html v1.5
+          LI: body.metrics.LI ?? 0,
+          R: body.metrics.R ?? 0,
+          dH: body.metrics.dH ?? 0,
+          tC: body.metrics.tC ?? tC_derived,
+          Q_Arnold: body.metrics.Q_Arnold ?? 0
+        }
       };
 
-      // 3. Inserción en Supabase (Persistencia Real)
-      const { error } = await supabase
-        .from('tcds_events')
-        .insert([eventData]);
+      // Guardar en memoria (Buffer de 1000 eventos)
+      events.push(event);
+      if (events.length > 1000) events.shift();
 
-      if (error) throw error;
+      // Log para ver en Vercel que llegó
+      console.log(`[INGESTA] Nodo: ${event.device_id.slice(0,5)} | LI: ${event.metrics.LI.toFixed(2)}`);
 
-      // Log de éxito en consola de servidor
-      console.log(`[TCDS-DB] Nodo ${eventData.device_id.slice(0,4)} :: dH ${eventData.dh_shannon}`);
-
-      return res.status(200).json({ ok: true, saved: true });
-
+      return res.status(200).json({ ok: true });
     } catch (err) {
-      console.error("Error crítico en ingesta DB:", err);
-      return res.status(500).json({ ok: false, error: "Fallo de escritura en tejido causal" });
+      return res.status(500).json({ ok: false, error: "Error interno" });
     }
   }
 
-  // ---------------------------------------------------------
-  // GET: Consulta para el Dashboard (Visualización)
-  // ---------------------------------------------------------
+  // --- GET: Para que tú verifiques si hay datos entrando ---
   if (req.method === "GET") {
-    // Traemos los últimos 50 eventos reales de la DB
-    const { data, error } = await supabase
-      .from('tcds_events')
-      .select('*')
-      .order('received_at', { ascending: false })
-      .limit(50);
-
-    if (error) return res.status(500).json({ error: error.message });
-
-    // Formateamos para que dashboard.html lo entienda sin cambios
-    const formattedEvents = data.map(ev => ({
-       id: ev.device_id,
-       time: ev.received_at,
-       metrics: {
-         tC: 0, // Calculado en frontend si es necesario
-         LI: ev.li,
-         R: ev.r_kuramoto,
-         dH: ev.dh_shannon
-       }
-    }));
-
-    // Calculamos promedios rápidos para la cabecera del dashboard
-    const avg = (key) => data.reduce((a, b) => a + (b[key]||0), 0) / (data.length||1);
-    
     return res.status(200).json({
-      timestamp: Date.now(),
-      active_nodes: new Set(data.map(d => d.device_id)).size,
-      tc_mean: avg('amag'), // Usamos magnitud como proxy temporal
-      li_mean: avg('li'),
-      r_mean: avg('r_kuramoto'),
-      dh_mean: avg('dh_shannon'),
-      latest_raw: formattedEvents
+      status: "TCDS Network Online",
+      cached_events: events.length,
+      latest: events.slice(-5).reverse()
     });
   }
 }
