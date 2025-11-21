@@ -410,6 +410,22 @@
             x1="500" y1="400" x2="500" y2="110"
             stroke="#ff6bff" stroke-width="4"
             opacity="0.9"/>
+       <freqNeedle {
+  filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5));
+  animation: sweep 2s linear infinite;
+}
+
+@keyframes sweep {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 107, 255, 0.8));
+  }
+  100% {
+    filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5));
+  }
+}
 
       <!-- Centro y etiqueta -->
       <circle cx="500" cy="400" r="11" fill="#020617" stroke="#35e0ff" stroke-width="2.5"/>
