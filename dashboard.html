@@ -289,8 +289,8 @@
 
   async function fetchData() {
     try {
-      // Consumimos el GET del api/reports que conecta a Supabase
-      const res = await fetch(`${API_BASE}/api/reports`);
+      // CAMBIO TÁCTICO: Apuntamos al Cerebro Unificado
+const res = await fetch(API_BASE + '/api/reports');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       
       const data = await res.json();
