@@ -6,6 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Nodo sensor TCDS: Medición de entropía espectral de Shannon y coherencia Q-Driven.">
   <style>
+     #tcNeedle {
+  filter: drop-shadow(0 0 5px rgba(53, 224, 255, 0.5));
+}
+<defs>
+  ...
+  <pattern id="clockPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+    <rect x="0" y="0" width="20" height="20" fill="           
+    <circle cx="10" cy="10" r="2" fill="#35e0ff" />
+  </pattern>
+</defs>
+<circle cx="500" cy="400" r="380" fill="url(#clockPattern)" />
+#tcNeedle {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(-60deg);
+  }
+  100% {
+    transform: rotate(300deg);
+  }
+}
+
     :root {
       --bg: #030413;
       --bg-alt: #0b0f1f;
