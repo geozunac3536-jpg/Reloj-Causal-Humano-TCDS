@@ -6,6 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Nodo sensor TCDS: Medición de entropía espectral de Shannon y coherencia Q-Driven.">
   <style>
+    <defs>
+  ...
+  <filter id="burbuja" x="-20%" y="-20%" width="140%" height="140%">
+    <feGaussianBlur stdDeviation="10" result="blur"/>
+    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+  </filter>
+</defs>
+<circle cx="500" cy="400" r="380" fill="url(#gradDial)" filter="url(#burbuja)"/>
+
      #tcNeedle {
   filter: drop-shadow(0 0 5px rgba(53, 224, 255, 0.5));
 }
@@ -27,7 +36,25 @@
   filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5));
   animation: sweep 2s linear infinite;
 }
-@keyframes sweep {
+@keyframes rotate-led {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotate-led-inverse {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+    @keyframes sweep {
   0% {
     filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5));
   }
