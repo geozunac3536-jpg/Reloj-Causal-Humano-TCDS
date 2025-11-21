@@ -1,67 +1,79 @@
 // api/reports.js
-// CEREBRO DE INGESTA (Memoria Compartida)
-// Función: Recibe datos del sensor, los guarda en RAM y permite auditoría.
+// CEREBRO UNIFICADO TCDS (Ingesta + Analítica)
+// Soluciona el problema de memoria dividida en Vercel
 
-// 1. Exportamos la memoria 'events' para que query.js pueda leerla
-export let events = [];
+// Memoria Volátil (Se mantiene viva en el contenedor activo)
+let events = [];
 
 export default async function handler(req, res) {
-  // CORS: Permite que tu reloj (frontend) envíe datos desde cualquier lugar
+  // CORS: Permisos totales para tu Dashboard y Reloj
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // --- POST: Recibir datos del Nodo (Tu Celular) ---
+  // ---------------------------------------------------------
+  // MODO 1: INGESTA (POST) - El Reloj envía datos aquí
+  // ---------------------------------------------------------
   if (req.method === "POST") {
     try {
       const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      
+      if (!body || !body.metrics) return res.status(400).json({ error: "Data error" });
 
-      // Validación básica de seguridad
-      if (!body || !body.metrics) {
-        return res.status(400).json({ ok: false, error: "Datos incompletos" });
-      }
-
-      // Reconstrucción de t_C si falta (para el dashboard visual)
-      const aMag = body.metrics.aMag || 0;
-      const tC_derived = Math.min(aMag / 10, 1) * 2 - 1;
-
+      // Guardamos el evento
       const event = {
         device_id: body.device_id || "anon",
-        timestamp: body.timestamp || Date.now(),
-        receivedAt: Date.now(),
-        geo: body.geo || {}, // Guarda coordenadas GPS
+        timestamp: Date.now(),
         metrics: {
-          aMag: aMag,
-          // Aquí alineamos los nombres con tu index.html v1.5
-          LI: body.metrics.LI ?? 0,
-          R: body.metrics.R ?? 0,
-          dH: body.metrics.dH ?? 0,
-          tC: body.metrics.tC ?? tC_derived,
-          Q_Arnold: body.metrics.Q_Arnold ?? 0
+          tC: body.metrics.tC || 0,
+          LI: body.metrics.LI || 0,
+          R: body.metrics.R || 0,
+          dH: body.metrics.dH || 0,
+          Q: body.metrics.Q_Arnold || 0
         }
       };
 
-      // Guardar en memoria (Buffer de 1000 eventos)
       events.push(event);
+      // Mantenemos solo los últimos 1000 para no llenar la memoria
       if (events.length > 1000) events.shift();
 
-      // Log para ver en Vercel que llegó
-      console.log(`[INGESTA] Nodo: ${event.device_id.slice(0,5)} | LI: ${event.metrics.LI.toFixed(2)}`);
+      console.log(`[INGESTA] Dato recibido. Memoria actual: ${events.length} eventos.`);
+      return res.status(200).json({ ok: true, msg: "Recibido" });
 
-      return res.status(200).json({ ok: true });
-    } catch (err) {
-      return res.status(500).json({ ok: false, error: "Error interno" });
-    }
+    } catch (e) { return res.status(500).json({ error: "Error interno" }); }
   }
 
-  // --- GET: Para que tú verifiques si hay datos entrando ---
+  // ---------------------------------------------------------
+  // MODO 2: ANALÍTICA (GET) - El Dashboard lee esto
+  // ---------------------------------------------------------
   if (req.method === "GET") {
+    // Calculamos los promedios aquí mismo (donde están los datos)
+    
+    const now = Date.now();
+    // Filtramos solo datos recientes (últimos 5 minutos) para que sea tiempo real
+    const recent = events.filter(e => (now - e.timestamp) < 5 * 60 * 1000);
+    const total = recent.length;
+
+    // Nodos activos únicos
+    const uniqueNodes = new Set(recent.map(e => e.device_id)).size;
+
+    // Helper de promedio
+    const avg = (key) => total === 0 ? 0 : recent.reduce((acc, e) => acc + (e.metrics[key]||0), 0) / total;
+
+    // Respuesta formateada para el Dashboard
     return res.status(200).json({
-      status: "TCDS Network Online",
-      cached_events: events.length,
-      latest: events.slice(-5).reverse()
+      status: "TCDS Unified Brain Online",
+      active_nodes: uniqueNodes, // El Dashboard busca esto
+      tc_mean: avg('tC'),        // El Dashboard busca esto
+      li_mean: avg('LI'),
+      r_mean: avg('R'),
+      dh_mean: avg('dH'),
+      q_mean: avg('Q'),
+      // Datos extra para debug
+      memory_size: events.length,
+      latest_timestamp: total > 0 ? recent[recent.length-1].timestamp : 0
     });
   }
 }
