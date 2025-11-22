@@ -101,7 +101,7 @@ See `03_DOCUMENTATION/LICENSE` for full details.
 **Genaro Carrasco Ozuna**  
 Architect of the TCDS theoretical framework  
 orcid: https://orcid.org/0009-0005-6358-9910  
-email: genarocarrasco.ozuna@gmail.com  
+email: geozunac3536@gmail.com  
 Affiliation: Proyecto TCDS — Motor Sincrónico de Luz (MSL), Mexico  
 
 ---
