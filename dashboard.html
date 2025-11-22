@@ -132,7 +132,7 @@
       border-radius: 8px;
       border-left: 3px solid #555;
     }
-    
+
     .status span { font-weight: 700; }
     .status-ok { color: var(--ok); border-color: var(--ok); }
     .status-bad { color: var(--danger); border-color: var(--danger); }
@@ -154,7 +154,7 @@
   <header>
     <div class="title">Panel de Control TCDS</div>
     <div class="subtitle">
-      Monitor de Coherencia Global. Visualización de datos persistentes de Entropía de Shannon ($\Delta H$) y Sincronización de Fase ($LI$) almacenados en el tejido digital (Supabase).
+      Monitor de Coherencia Global. Visualización de datos persistentes de Entropía de Shannon (ΔH) y Sincronización de Fase (LI) almacenados en el tejido digital.
     </div>
   </header>
 
@@ -168,7 +168,7 @@
           <div class="kpi-tag">Dispositivos reportando</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">$\Delta H$ Medio</div>
+          <div class="kpi-label">ΔH Medio</div>
           <div class="kpi-value" id="kpi_dh">--</div>
           <div class="kpi-tag">Entropía Shannon</div>
         </div>
@@ -183,14 +183,14 @@
           <div class="kpi-tag">Kuramoto Proxy</div>
         </div>
       </div>
-      
+
       <div id="statusBox" class="status status-wait">
         <span>CONECTANDO...</span> Esperando respuesta de la API TCDS.
       </div>
     </section>
 
     <section class="card">
-      <div class="card-title">Evolución Temporal ($\Delta H$ vs $LI$)</div>
+      <div class="card-title">Evolución Temporal (ΔH vs LI)</div>
       <div style="height: 200px; position: relative;">
         <canvas id="chartTcDh"></canvas>
       </div>
@@ -212,9 +212,10 @@
 
 <script>
   /* ================= CONFIGURACIÓN ================= */
-  // IMPORTANTE: Cambia esto a la URL de tu proyecto Vercel real
-  const API_BASE = 'https://tcds-reloj-causal.vercel.app'; 
-  
+  // URL base del backend (Vercel)
+  const API_BASE = 'https://tcds-reloj-causal.vercel.app';
+  const API_ENDPOINT = API_BASE + '/api/reports';
+
   /* ================= UI REFS ================= */
   const kpiNodes = document.getElementById('kpi_nodes');
   const kpiDh = document.getElementById('kpi_dh');
@@ -224,7 +225,7 @@
   const apiUrlLabel = document.getElementById('apiUrlLabel');
   const lastUpdateLabel = document.getElementById('lastUpdate');
 
-  apiUrlLabel.textContent = API_BASE + '/api/reports';
+  apiUrlLabel.textContent = API_ENDPOINT;
 
   /* ================= CHART CONFIG ================= */
   const ctx = document.getElementById('chartTcDh').getContext('2d');
@@ -236,7 +237,7 @@
         {
           label: 'Entropía Shannon (ΔH)',
           data: [],
-          borderColor: '#ff6b6b', // Rojo (Peligro/Ruido)
+          borderColor: '#ff6b6b',
           backgroundColor: 'rgba(255, 107, 107, 0.1)',
           borderWidth: 2,
           tension: 0.4,
@@ -245,7 +246,7 @@
         {
           label: 'Locking Index (LI)',
           data: [],
-          borderColor: '#35e0ff', // Cian (Orden TCDS)
+          borderColor: '#35e0ff',
           backgroundColor: 'rgba(53, 224, 255, 0.1)',
           borderWidth: 2,
           tension: 0.4,
@@ -261,9 +262,13 @@
         legend: { labels: { color: '#ccc', font: {size:10} } }
       },
       scales: {
-        x: { display: false }, // Ocultar etiquetas X para limpieza visual
+        x: {
+          display: false,
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        },
         y: {
-          min: -1, max: 1,
+          min: -1,
+          max: 1,
           grid: { color: 'rgba(255,255,255,0.05)' },
           ticks: { color: '#888', font: {size:9} }
         }
@@ -271,10 +276,16 @@
     }
   });
 
-  /* ================= LOGICA DE DATOS ================= */
-  
+  /* ================= LÓGICA TCDS ================= */
+
   function interpretCoherence(dh, li) {
-    // Lógica TCDS: Queremos Entropía Baja (dH negativo) y Locking Alto (LI positivo)
+    // Queremos ΔH negativa (orden) y LI alto (locking).
+    if (typeof dh !== 'number' || typeof li !== 'number') {
+      statusBox.className = "status status-wait";
+      statusBox.innerHTML = `<span>SIN MÉTRICAS:</span> La API respondió pero no entregó Σ-metrics aún.`;
+      return;
+    }
+
     if (dh <= -0.4 && li >= 0.8) {
       statusBox.className = "status status-ok";
       statusBox.innerHTML = `<span>SISTEMA COHERENTE:</span> La red muestra estructura intencional (Shannon Order).`;
@@ -289,47 +300,77 @@
 
   async function fetchData() {
     try {
-      // CAMBIO TÁCTICO: Apuntamos al Cerebro Unificado
-const res = await fetch(API_BASE + '/api/reports');
+      const res = await fetch(API_ENDPOINT);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
-      const data = await res.json();
-      
-      // 1. Actualizar KPIs (Medias Globales)
-      kpiNodes.textContent = data.active_nodes || 0;
-      kpiDh.textContent = (data.dh_mean || 0).toFixed(3);
-      kpiLi.textContent = (data.li_mean || 0).toFixed(2);
-      kpiR.textContent = (data.r_mean || 0).toFixed(2);
 
-      // 2. Actualizar Gráfica con Historial Real
-      // La API devuelve "latest_raw" ordenado descendente (más nuevo primero)
-      // Para la gráfica necesitamos ascendente (antiguo -> nuevo)
-      if (data.latest_raw && Array.isArray(data.latest_raw)) {
+      const data = await res.json();
+
+      // Caso 1: API en modo ping (sin datos históricos)
+      if (data.mode === 'ping' && !data.latest_raw) {
+        kpiNodes.textContent = 0;
+        kpiDh.textContent = '--';
+        kpiLi.textContent = '--';
+        kpiR.textContent = '--';
+
+        chartTcDh.data.labels = [];
+        chartTcDh.data.datasets[0].data = [];
+        chartTcDh.data.datasets[1].data = [];
+        chartTcDh.update();
+
+        statusBox.className = "status status-wait";
+        statusBox.innerHTML = `<span>API EN MODO PING:</span> Backend activo pero sin datos persistentes (Supabase/DB vacía o no inicializada).`;
+
+        lastUpdateLabel.textContent = `Última actualización: ${new Date().toLocaleTimeString()}`;
+        return;
+      }
+
+      // Caso 2: API con Σ-metrics agregadas
+      const dh_mean = typeof data.dh_mean === 'number' ? data.dh_mean : 0;
+      const li_mean = typeof data.li_mean === 'number' ? data.li_mean : 0;
+      const r_mean  = typeof data.r_mean  === 'number' ? data.r_mean  : 0;
+      const nodes   = typeof data.active_nodes === 'number' ? data.active_nodes : 0;
+
+      kpiNodes.textContent = nodes;
+      kpiDh.textContent = dh_mean.toFixed(3);
+      kpiLi.textContent = li_mean.toFixed(2);
+      kpiR.textContent  = r_mean.toFixed(2);
+
+      // Historial para la gráfica
+      if (Array.isArray(data.latest_raw) && data.latest_raw.length > 0) {
         const history = [...data.latest_raw].reverse();
-        
-        chartTcDh.data.labels = history.map(e => new Date(e.time).toLocaleTimeString());
-        chartTcDh.data.datasets[0].data = history.map(e => e.metrics.dH);
-        chartTcDh.data.datasets[1].data = history.map(e => e.metrics.LI);
-        
+
+        chartTcDh.data.labels = history.map(e =>
+          e.time ? new Date(e.time).toLocaleTimeString() : ''
+        );
+        chartTcDh.data.datasets[0].data = history.map(e =>
+          e.metrics && typeof e.metrics.dH === 'number' ? e.metrics.dH : null
+        );
+        chartTcDh.data.datasets[1].data = history.map(e =>
+          e.metrics && typeof e.metrics.LI === 'number' ? e.metrics.LI : null
+        );
+
+        chartTcDh.update();
+      } else {
+        // Sin historial, pero con medias → no graficamos falsos datos
+        chartTcDh.data.labels = [];
+        chartTcDh.data.datasets[0].data = [];
+        chartTcDh.data.datasets[1].data = [];
         chartTcDh.update();
       }
 
-      // 3. Interpretar Estado
-      interpretCoherence(data.dh_mean, data.li_mean);
-      
+      interpretCoherence(dh_mean, li_mean);
       lastUpdateLabel.textContent = `Última actualización: ${new Date().toLocaleTimeString()}`;
 
     } catch (err) {
       console.error("Error fetching TCDS data:", err);
       statusBox.className = "status status-bad";
-      statusBox.innerHTML = `<span>ERROR DE CONEXIÓN:</span> No se pudo leer la Base de Datos TCDS.`;
+      statusBox.innerHTML = `<span>ERROR DE CONEXIÓN:</span> No se pudo leer la Base de Datos TCDS (${err.message}).`;
     }
   }
 
-  // Iniciar ciclo de actualización (cada 5 segundos)
+  // Primera carga + actualización periódica
   fetchData();
   setInterval(fetchData, 5000);
-
 </script>
 </body>
 </html>
