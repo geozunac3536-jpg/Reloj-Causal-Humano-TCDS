@@ -95,6 +95,14 @@
       transform: translateY(-2px);
     }
 
+    /* pulso cuando transmite */
+    .big-clock.tx-pulse {
+      box-shadow:
+        0 0 35px rgba(64,255,156,0.6),
+        0 28px 80px rgba(0,0,0,0.95);
+      border-color: rgba(64,255,156,0.9);
+    }
+
     .big-clock-glow {
       position: absolute;
       inset: 8%;
@@ -246,6 +254,17 @@
       opacity: 1;
     }
 
+    #modeBtn {
+      background: radial-gradient(circle at 30% 0%, #fef9c3, #eab308);
+      color: #0b0f19;
+      font-size: 11px;
+    }
+
+    #modeBtn.demo {
+      background: radial-gradient(circle at 30% 0%, #bbf7d0, #22c55e);
+      color: #022c22;
+    }
+
     .geo-tag {
       font-size: 10px;
       color: var(--accent);
@@ -283,27 +302,6 @@
       100% { r: 12; opacity: 0.55; }
     }
 
-    @keyframes rotate-led {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @keyframes rotate-led-inverse {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(-360deg); }
-    }
-
-    @keyframes sweep {
-      0% { filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5)); }
-      50% { filter: drop-shadow(0 0 20px rgba(255, 107, 255, 0.8)); }
-      100% { filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5)); }
-    }
-
-    @keyframes rotate {
-      0% { transform: rotate(-60deg); }
-      100% { transform: rotate(300deg); }
-    }
-
     #tcNeedle {
       filter: drop-shadow(0 0 5px rgba(53, 224, 255, 0.5));
     }
@@ -326,9 +324,17 @@
   <div class="shell">
     <div class="big-clock" id="bigClock">
       <div class="big-clock-glow"></div>
+
+      <!-- Etiquetas de modo y estado -->
       <div style="position:absolute; top:18px; right:22px; font-size:11px; color:var(--accent);" id="modeLabel">
         ESPERANDO NODO...
       </div>
+      <div style="position:absolute; top:18px; left:22px; font-size:11px;">
+        <span id="modeBadge" style="padding:4px 10px; border-radius:999px; border:1px solid rgba(148,163,184,0.7); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; font-size:10px;">
+          MODO: CIENTÍFICO
+        </span>
+      </div>
+
       <svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <filter id="burbuja" x="-20%" y="-20%" width="140%" height="140%">
@@ -349,10 +355,6 @@
             <stop offset="50%" stop-color="rgba(56,189,248,0.05)"/>
             <stop offset="100%" stop-color="rgba(148,163,184,0.4)"/>
           </radialGradient>
-          <pattern id="clockPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-            <rect x="0" y="0" width="20" height="20" fill="transparent"/>
-            <circle cx="10" cy="10" r="2" fill="#35e0ff" />
-          </pattern>
         </defs>
 
         <!-- Disco principal -->
@@ -365,20 +367,20 @@
                   stroke-dasharray="16 26" opacity="0.45"/>
         </g>
 
-        <!-- Aguja t_C (Magnitud de aceleración relativa) -->
+        <!-- Aguja t_C -->
         <line id="tcNeedle"
               x1="500" y1="400" x2="500" y2="150"
               stroke="url(#gradNeedle)" stroke-width="8"
               stroke-linecap="round"
               transform="rotate(-60 500 400)"/>
 
-        <!-- Aguja de Frecuencia Pico (estructura espectral) -->
+        <!-- Aguja de Frecuencia Pico -->
         <line id="freqNeedle"
               x1="500" y1="400" x2="500" y2="110"
               stroke="#ff6bff" stroke-width="4"
               opacity="0.9"/>
-         
-        <!-- Centro y etiqueta -->
+
+        <!-- Centro -->
         <circle cx="500" cy="400" r="11" fill="#020617" stroke="#35e0ff" stroke-width="2.5"/>
         <circle cx="500" cy="400" r="14" fill="none" stroke="rgba(148,163,184,0.7)" stroke-width="1.2"/>
 
@@ -438,6 +440,9 @@
           <span id="timeSyncStatus" class="geo-tag" style="color:var(--ok);">
             Reloj: Local (Sync pendiente)
           </span>
+          <span id="linkStatus" class="geo-tag" style="color:var(--warn);">
+            LINK: Inactivo (sin TX aún)
+          </span>
         </div>
       </div>
 
@@ -451,9 +456,10 @@
           <div>Factor Q: <strong id="qLive" style="color:var(--accent);">--</strong></div>
           <div>Frec. Pico: <strong id="peakLive">0.00</strong> Hz</div>
         </div>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button id="startBtn">ACTIVAR NODO</button>
           <button id="stopBtn">DETENER</button>
+          <button id="modeBtn">MODO: CIENTÍFICO</button>
         </div>
       </div>
     </div>
@@ -470,8 +476,6 @@
 
     /* ================= VARIABLES DE ESTADO ================= */
     let accelBuffer = [];
-    let lastTime = 0;
-
     let current_LI = 0;
     let current_R = 0;
     let current_dH = 0;
@@ -483,11 +487,41 @@
     let timeOffset = 0;
     const N_FFT = 256;
 
+    let mode = "scientific"; // "scientific" | "demo"
+
     /* ================= UI REFERENCES ================= */
     const ruleLI = document.getElementById('ruleLI');
     const ruleR = document.getElementById('ruleR');
     const ruleEnt = document.getElementById('ruleEnt');
     const geoStatus = document.getElementById('geoStatus');
+    const linkStatus = document.getElementById('linkStatus');
+    const modeLabel = document.getElementById('modeLabel');
+    const modeBadge = document.getElementById('modeBadge');
+    const bigClock = document.getElementById('bigClock');
+    const modeBtn = document.getElementById('modeBtn');
+
+    /* ================= LÓGICA DE MODO ================= */
+    function updateModeUI() {
+      if (mode === "scientific") {
+        modeBadge.textContent = "MODO: CIENTÍFICO";
+        modeBadge.style.borderColor = "rgba(148,163,184,0.7)";
+        modeBadge.style.color = "#e5e7eb";
+        modeBtn.textContent = "MODO: CIENTÍFICO";
+        modeBtn.classList.remove("demo");
+      } else {
+        modeBadge.textContent = "MODO: DEMO";
+        modeBadge.style.borderColor = "rgba(74,222,128,0.8)";
+        modeBadge.style.color = "#bbf7d0";
+        modeBtn.textContent = "MODO: DEMO";
+        modeBtn.classList.add("demo");
+      }
+    }
+
+    modeBtn.onclick = () => {
+      mode = (mode === "scientific") ? "demo" : "scientific";
+      updateModeUI();
+    };
+    updateModeUI();
 
     /* ================= LÓGICA DE GEOLOCALIZACIÓN ================= */
     function getGeolocation() {
@@ -501,7 +535,8 @@
           geoData.lat = pos.coords.latitude;
           geoData.lon = pos.coords.longitude;
           geoData.acc = pos.coords.accuracy;
-          geoStatus.textContent = `GPS: Activo (\( {geoData.lat.toFixed(4)}, \){geoData.lon.toFixed(4)})`;
+          geoStatus.textContent =
+            `GPS: Activo (${geoData.lat.toFixed(4)}, ${geoData.lon.toFixed(4)})`;
           geoStatus.style.color = "var(--ok)";
         },
         (err) => {
@@ -525,7 +560,6 @@
       let spectrum = [];
       let totalSpectralPower = 0;
 
-      // Banda baja 0.2–7 Hz aprox. (primeros 30 bins)
       for (let k = 1; k < 30; k++) {
         let real = 0, imag = 0;
         for (let n = 0; n < N_FFT; n++) {
@@ -540,40 +574,34 @@
 
         if (mag > maxMag) {
           maxMag = mag;
-          peakFreq = k * (60 / N_FFT); // Asunción fs ≈ 60 Hz
+          peakFreq = k * (60 / N_FFT); // fs ≈ 60 Hz
         }
       }
 
       if (maxMag < 0.1) {
         current_Q = 0;
-        current_dH = 0; // Silencio ≈ entropía máxima (sin estructura útil)
+        current_dH = 0;
         return;
       }
 
-      // Factor Q: nitidez de pico
       const halfPower = maxMag * 0.5;
       let widthBins = 0;
       spectrum.forEach(mag => { if (mag > halfPower) widthBins++; });
       current_Q = widthBins > 0 ? (1.0 / widthBins) : 0;
       current_PeakFreq = peakFreq;
 
-      // Entropía de Shannon normalizada
       let shannonH = 0;
       if (totalSpectralPower > 0) {
         for (let mag of spectrum) {
           const p = mag / totalSpectralPower;
-          if (p > 0) {
-            shannonH += -p * Math.log2(p);
-          }
+          if (p > 0) shannonH += -p * Math.log2(p);
         }
       }
 
       const maxH = Math.log2(spectrum.length || 1);
       const normalizedH = maxH > 0 ? shannonH / maxH : 1;
-      // mapeo a ΔH ∈ [−1, 0]
-      current_dH = normalizedH - 1.0;
+      current_dH = normalizedH - 1.0; // ΔH ∈ [−1,0]
 
-      // UI espectral
       document.getElementById('qLive').textContent = current_Q.toFixed(2);
       document.getElementById('peakLive').textContent = current_PeakFreq.toFixed(1);
 
@@ -602,17 +630,12 @@
       const variance = slice.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / slice.length;
       const std = Math.sqrt(variance);
 
-      // LI: estabilidad de amplitud (menor ruido → mayor LI)
       const noiseNorm = Math.min(std / 4, 1);
       let raw_LI = 1.0 - noiseNorm;
 
-      // Inyección de Q: si el espectro es nítido, aumenta confianza
       current_LI = (raw_LI * 0.6) + (current_Q * 0.4);
-
-      // R proxy: acoplado a LI (futura versión podría usar fases reales)
       current_R = 0.8 + (0.2 * current_LI);
 
-      // Reglas visuales (E-Veto y locking)
       if (current_LI >= 0.9) {
         ruleLI.className = "rule-box rule-pass";
       } else {
@@ -631,21 +654,27 @@
         ruleEnt.className = "rule-box rule-fail";
       }
 
-      // UI numérica
       document.getElementById('liLive').textContent = current_LI.toFixed(2);
       document.getElementById('rLive').textContent = current_R.toFixed(2);
       document.getElementById('dHLive').textContent = current_dH.toFixed(3);
 
-      // Telemetría: sólo cuando LI alto + entropía baja (doble sello)
-      if (current_LI > 0.85 && current_dH < -0.4) {
-        sendReport();
+      // Lógica de disparo según modo
+      if (mode === "scientific") {
+        if (current_LI > 0.85 && current_dH < -0.4) {
+          sendReport("scientific");
+        }
+      } else {
+        // Modo DEMO: enviar mientras haya ventana razonable
+        if (accelBuffer.length > 64) {
+          sendReport("demo");
+        }
       }
     }
 
     /* ================= ENVÍO DE REPORTE ================= */
-    function sendReport() {
+    function sendReport(modeTag) {
       const now = Date.now();
-      if (window.lastReport && (now - window.lastReport < 5000)) return;
+      if (window.lastReport && (now - window.lastReport < 5000)) return; // throttle 5s
       window.lastReport = now;
 
       const payload = {
@@ -657,11 +686,20 @@
           LI: current_LI,
           R: current_R,
           dH: current_dH,
-          Q_Arnold: current_Q
+          Q_Arnold: current_Q,
+          mode: modeTag || mode
         }
       };
 
       const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+
+      // Feedback visual de TX
+      bigClock.classList.add("tx-pulse");
+      linkStatus.textContent = `LINK: TX → /api/reports (${mode.toUpperCase()})`;
+      linkStatus.style.color = "var(--accent3)";
+      setTimeout(() => {
+        bigClock.classList.remove("tx-pulse");
+      }, 300);
 
       if (navigator.sendBeacon) {
         navigator.sendBeacon(REPORT_URL, blob);
@@ -685,14 +723,12 @@
       if (accelBuffer.length > 512) accelBuffer.shift();
       current_aMag = mag;
 
-      // t_C visual: desviación respecto a 9.8 m/s²
       const normalizedMag = Math.abs(mag - 9.8);
       const tcAngle = -60 + (Math.min(normalizedMag / 5, 1) * 120);
       document.getElementById('tcNeedle')
         .setAttribute('transform', `rotate(${tcAngle} 500 400)`);
       document.getElementById('magLive').textContent = mag.toFixed(2);
 
-      // Lanzar análisis espectral aproximadamente cada ~100 ms
       if (Date.now() % 100 < 20) {
         computeSpectralSharpness();
       }
@@ -718,16 +754,18 @@
       }
 
       window.addEventListener('devicemotion', handleMotion);
-      document.getElementById('bigClock').classList.add('ready');
-      document.getElementById('modeLabel').textContent = "NODO ACTIVO (SHANNON)";
+      bigClock.classList.add('ready');
+      modeLabel.textContent = "NODO ACTIVO (SHANNON)";
     }
 
     document.getElementById('startBtn').onclick = init;
     document.getElementById('stopBtn').onclick = () => {
       window.removeEventListener('devicemotion', handleMotion);
-      document.getElementById('bigClock').classList.remove('ready');
-      document.getElementById('modeLabel').textContent = "DETENIDO";
+      bigClock.classList.remove('ready');
+      modeLabel.textContent = "DETENIDO";
+      linkStatus.textContent = "LINK: Inactivo (sin TX)";
+      linkStatus.style.color = "var(--warn)";
     };
   </script>
 </body>
-  </html>
+</html>
