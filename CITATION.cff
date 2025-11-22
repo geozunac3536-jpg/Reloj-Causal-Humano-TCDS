@@ -1,0 +1,56 @@
+cff-version: 1.2.0
+title: "TCDS_Reloj_Causal_v1.5 — Reloj Causal Humano (Σ-Metrics, Shannon Entropy & Arnold Filter)"
+version: "1.5.0"
+doi: "10.5281/zenodo.17677864"
+message: >
+  Si utilizas este software o sus conceptos asociados en investigación,
+  trabajos académicos o divulgación, por favor cita este recurso según
+  el formato recomendado más adelante. Gracias.
+
+authors:
+  - family-names: "Carrasco Ozuna"
+    given-names: "Genaro"
+    affiliation: "Proyecto TCDS — Motor Sincrónico de Luz (MSL), México"
+    orcid: "https://orcid.org/0009-0005-6358-9910"
+
+abstract: >
+  El paquete TCDS_Reloj_Causal_v1.5 implementa un nodo web científico para la
+  medición en tiempo real del Reloj Causal Humano, basado en la Teoría Cromodinámica
+  Sincrónica (TCDS). El sistema calcula Σ-metrics de coherencia (LI, R, RMSE_SL),
+  entropía normalizada de Shannon (ΔH), nitidez espectral tipo Arnold (Q_Arnold) y
+  evalúa la señal mediante el Filtro de Honestidad (E-Veto). Incluye el marco teórico
+  completo (La_TCDS.pdf, Auditoria.pdf, Energia.pdf, Frecuencia_de_Ruptura.pdf), el
+  software del reloj y la documentación asociada.
+
+keywords:
+  - TCDS
+  - Sigma Metrics
+  - Reloj Causal Humano
+  - Coherencia
+  - Entropía de Shannon
+  - Arnold Filter
+  - Q-driven
+  - Segundo Coherencial
+  - Sincronón
+  - CSL-H
+  - Filtro E-Veto
+  - FFT
+  - Física Computacional
+  - Seismology
+  - Coherence Dynamics
+  - Time-Series Analysis
+
+license: "CC-BY-NC-SA-4.0"
+repository-code: "https://github.com/geozunac3536-jpg/TCDS_Reloj_Causal_Humano"
+url: "https://doi.org/10.5281/zenodo.17677864"
+
+preferred-citation:
+  type: software
+  authors:
+    - family-names: "Carrasco Ozuna"
+      given-names: "Genaro"
+      orcid: "https://orcid.org/0009-0005-6358-9910"
+  title: "TCDS_Reloj_Causal_v1.5 — Shannon/Arnold Σ-Metric Coherence Engine"
+  version: "1.5.0"
+  doi: "10.5281/zenodo.17677864"
+  date-released: "2025-02-XX"
