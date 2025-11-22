@@ -1,0 +1,95 @@
+{
+  "@context": "https://w3id.org/codemeta.jsonld",
+  "@type": "SoftwareSourceCode",
+  "name": "TCDS_Reloj_Causal_v1.5 — Reloj Causal Humano (Σ-Metrics, Shannon Entropy & Arnold Filter)",
+  "alternateName": "TCDS Human Causal Clock v1.5",
+  "identifier": "10.5281/zenodo.17677864",
+  "description": "Nodo web científico basado en la Teoría Cromodinámica Sincrónica (TCDS) para medir en tiempo real coherencia Σ (LI, R, RMSE_SL), entropía de Shannon normalizada (ΔH) y nitidez espectral tipo Arnold (Q_Arnold), evaluando señales mediante el Filtro de Honestidad (E-Veto) y proyectándolas en un Reloj Causal Humano.",
+  "version": "1.5.0",
+  "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "codeRepository": "https://github.com/geozunac3536-jpg/TCDS_Reloj_Causal_Humano",
+  "issueTracker": "https://github.com/geozunac3536-jpg/TCDS_Reloj_Causal_Humano/issues",
+  "downloadUrl": "https://zenodo.org/records/17677864",
+  "url": "https://doi.org/10.5281/zenodo.17677864",
+  "dateCreated": "2025-11-22",
+  "datePublished": "2025-11-22",
+  "dateModified": "2025-11-22",
+  "programmingLanguage": [
+    {
+      "@type": "ComputerLanguage",
+      "name": "JavaScript"
+    },
+    {
+      "@type": "ComputerLanguage",
+      "name": "HTML"
+    }
+  ],
+  "runtimePlatform": [
+    "Web browser",
+    "Vercel serverless"
+  ],
+  "operatingSystem": [
+    "Android",
+    "iOS",
+    "Any modern desktop OS with a compatible browser"
+  ],
+  "applicationCategory": "ScientificApplication",
+  "applicationSubCategory": "Coherence Metrics, Time-Series Visualization, Experimental Physics",
+  "keywords": [
+    "TCDS",
+    "Reloj Causal Humano",
+    "Sigma Metrics",
+    "Coherencia",
+    "Entropía de Shannon",
+    "ΔH",
+    "E-Veto",
+    "Filtro de Honestidad",
+    "Q_Arnold",
+    "Arnold Tongues",
+    "Segundo Coherencial",
+    "Sincronón",
+    "CSL-H",
+    "Time Series",
+    "FFT",
+    "Coherence Dynamics",
+    "Seismology",
+    "Causal Clock",
+    "Vercel",
+    "Web Scientific Node"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Genaro Carrasco Ozuna",
+      "givenName": "Genaro",
+      "familyName": "Carrasco Ozuna",
+      "@id": "https://orcid.org/0009-0005-6358-9910",
+      "identifier": "https://orcid.org/0009-0005-6358-9910",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Proyecto TCDS — Motor Sincrónico de Luz (MSL), México"
+      }
+    }
+  ],
+  "contributor": [
+    {
+      "@type": "Person",
+      "name": "Genaro Carrasco Ozuna",
+      "roleName": [
+        "WorkPackageLeader",
+        "ProjectLeader",
+        "SoftwareDeveloper",
+        "Researcher",
+        "RightsHolder"
+      ]
+    }
+  ],
+  "funding": [],
+  "relatedLink": [
+    "https://doi.org/10.5281/zenodo.17677864"
+  ],
+  "isPartOf": {
+    "@type": "CreativeWorkSeries",
+    "name": "Teoría Cromodinámica Sincrónica (TCDS)"
+  }
+}
