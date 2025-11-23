@@ -83,10 +83,6 @@
       z-index: 1;
     }
 
-    .big-clock {
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-    }
-
     .big-clock.ready {
       border-color: rgba(56,189,248,0.9);
       box-shadow:
@@ -101,6 +97,21 @@
         0 0 35px rgba(64,255,156,0.6),
         0 28px 80px rgba(0,0,0,0.95);
       border-color: rgba(64,255,156,0.9);
+    }
+
+    /* alertas globales */
+    .big-clock.alert-watch {
+      border-color: rgba(250,204,21,0.9);
+      box-shadow:
+        0 0 24px rgba(250,204,21,0.7),
+        0 24px 70px rgba(0,0,0,0.95);
+    }
+
+    .big-clock.alert-warning {
+      border-color: rgba(248,113,113,0.95);
+      box-shadow:
+        0 0 28px rgba(248,113,113,0.85),
+        0 26px 80px rgba(0,0,0,0.98);
     }
 
     .big-clock-glow {
@@ -278,7 +289,6 @@
       gap: 2px;
     }
 
-    /* --- TEXTO PEQUEÑO --- */
     .small-info {
       font-size: 11px;
       opacity: 0.8;
@@ -291,7 +301,6 @@
       font-weight: 600;
     }
 
-    /* --- ANIMACIONES --- */
     @keyframes spin-slow {
       to { transform: rotate(360deg); }
     }
@@ -317,6 +326,52 @@
       margin-top: 20px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+
+    /* --- BANDA DE LEDS ROJO / ÁMBAR / VERDE --- */
+    .led-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.9;
+    }
+
+    .led-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .led {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #27272a, #020617);
+      border: 1px solid #4b5563;
+      box-shadow: 0 0 0 rgba(0,0,0,0);
+      transition: 0.15s all;
+    }
+
+    .led.on-green {
+      background: radial-gradient(circle at 30% 30%, #bbf7d0, #22c55e);
+      border-color: #4ade80;
+      box-shadow: 0 0 10px rgba(34,197,94,0.9);
+    }
+
+    .led.on-amber {
+      background: radial-gradient(circle at 30% 30%, #fde68a, #f97316);
+      border-color: #fbbf24;
+      box-shadow: 0 0 12px rgba(251,191,36,0.85);
+    }
+
+    .led.on-red {
+      background: radial-gradient(circle at 30% 30%, #fecaca, #ef4444);
+      border-color: #f87171;
+      box-shadow: 0 0 14px rgba(248,113,113,0.95);
     }
   </style>
 </head>
@@ -443,12 +498,15 @@
           <span id="linkStatus" class="geo-tag" style="color:var(--warn);">
             LINK: Inactivo (sin TX aún)
           </span>
+          <span id="alertStatus" class="geo-tag" style="color:var(--accent2);">
+            ALERTA GLOBAL: ninguna
+          </span>
         </div>
       </div>
 
       <div class="card">
         <div class="card-title">Métricas y Control del Nodo</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; margin-bottom:12px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; margin-bottom:8px;">
           <div>|a|: <strong id="magLive">0.00</strong></div>
           <div>LI: <strong id="liLive">0.00</strong></div>
           <div>R: <strong id="rLive">0.00</strong></div>
@@ -456,7 +514,21 @@
           <div>Factor Q: <strong id="qLive" style="color:var(--accent);">--</strong></div>
           <div>Frec. Pico: <strong id="peakLive">0.00</strong> Hz</div>
         </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+
+        <!-- BANDA DE LEDS LOCAL -->
+        <div class="led-row">
+          <div class="led-label">
+            <span class="led" id="ledQuiet"></span> REPOSO
+          </div>
+          <div class="led-label">
+            <span class="led" id="ledWatch"></span> VIGILANCIA
+          </div>
+          <div class="led-label">
+            <span class="led" id="ledAlert"></span> ALERTA
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
           <button id="startBtn">ACTIVAR NODO</button>
           <button id="stopBtn">DETENER</button>
           <button id="modeBtn">MODO: CIENTÍFICO</button>
@@ -472,6 +544,7 @@
   <script>
     /* ================= CONFIGURACIÓN TCDS ================= */
     const REPORT_URL = "https://tcds-reloj-causal.vercel.app/api/reports";
+    const CONFIG_URL = "https://tcds-reloj-causal.vercel.app/api/config";
     const DEVICE_ID = (crypto.randomUUID ? crypto.randomUUID() : 'anon-' + Math.random());
 
     /* ================= VARIABLES DE ESTADO ================= */
@@ -488,6 +561,14 @@
     const N_FFT = 256;
 
     let mode = "scientific"; // "scientific" | "demo"
+    let remoteConfig = {
+      demo_gain: 1.0,
+      report_interval_ms: 5000,
+      mode_hint: "auto",
+      alerts_enabled: true
+    };
+
+    let lastAlertLevel = "none";
 
     /* ================= UI REFERENCES ================= */
     const ruleLI = document.getElementById('ruleLI');
@@ -499,8 +580,14 @@
     const modeBadge = document.getElementById('modeBadge');
     const bigClock = document.getElementById('bigClock');
     const modeBtn = document.getElementById('modeBtn');
+    const alertStatus = document.getElementById('alertStatus');
 
-    /* ================= LÓGICA DE MODO ================= */
+    const ledQuiet = document.getElementById('ledQuiet');
+    const ledWatch = document.getElementById('ledWatch');
+    const ledAlert = document.getElementById('ledAlert');
+    let lastLocalState = "idle";
+
+    /* ================= LÓGICA DE MODO LOCAL ================= */
     function updateModeUI() {
       if (mode === "scientific") {
         modeBadge.textContent = "MODO: CIENTÍFICO";
@@ -522,6 +609,30 @@
       updateModeUI();
     };
     updateModeUI();
+
+    /* ================= BANDA DE LEDS ================= */
+    function setLEDState(state) {
+      [ledQuiet, ledWatch, ledAlert].forEach(el => {
+        el.classList.remove('on-green', 'on-amber', 'on-red');
+      });
+
+      if (state === "idle") {
+        ledQuiet.classList.add('on-green');
+      } else if (state === "watch") {
+        ledWatch.classList.add('on-amber');
+      } else if (state === "alert") {
+        ledAlert.classList.add('on-red');
+      }
+
+      // al pasar de no-alerta a alerta, zumbido local
+      if (state === "alert" && lastLocalState !== "alert") {
+        beepOnce();
+        if (navigator.vibrate) {
+          navigator.vibrate([120, 80, 120]);
+        }
+      }
+      lastLocalState = state;
+    }
 
     /* ================= LÓGICA DE GEOLOCALIZACIÓN ================= */
     function getGeolocation() {
@@ -633,6 +744,12 @@
       const noiseNorm = Math.min(std / 4, 1);
       let raw_LI = 1.0 - noiseNorm;
 
+      // demo_gain sólo afecta el tramo demo (puedes usarlo para exagerar variaciones)
+      const gain = remoteConfig.demo_gain || 1.0;
+      if (mode === "demo") {
+        raw_LI = Math.max(0, Math.min(1, raw_LI * gain));
+      }
+
       current_LI = (raw_LI * 0.6) + (current_Q * 0.4);
       current_R = 0.8 + (0.2 * current_LI);
 
@@ -658,13 +775,28 @@
       document.getElementById('rLive').textContent = current_R.toFixed(2);
       document.getElementById('dHLive').textContent = current_dH.toFixed(3);
 
-      // Lógica de disparo según modo
-      if (mode === "scientific") {
+      // decidir modo efectivo con pista remota
+      let effectiveMode = mode;
+      if (remoteConfig.mode_hint === "force_demo") {
+        effectiveMode = "demo";
+      } else if (remoteConfig.mode_hint === "force_scientific") {
+        effectiveMode = "scientific";
+      }
+
+      // Clasificación local de estado para LEDs
+      let state = "idle";
+      if (current_LI >= 0.9 && current_dH < -0.5) {
+        state = "alert";
+      } else if (current_LI >= 0.7 || current_dH < -0.25) {
+        state = "watch";
+      }
+      setLEDState(state);
+
+      if (effectiveMode === "scientific") {
         if (current_LI > 0.85 && current_dH < -0.4) {
           sendReport("scientific");
         }
       } else {
-        // Modo DEMO: enviar mientras haya ventana razonable
         if (accelBuffer.length > 64) {
           sendReport("demo");
         }
@@ -674,7 +806,9 @@
     /* ================= ENVÍO DE REPORTE ================= */
     function sendReport(modeTag) {
       const now = Date.now();
-      if (window.lastReport && (now - window.lastReport < 5000)) return; // throttle 5s
+      const interval = remoteConfig.report_interval_ms || 5000;
+
+      if (window.lastReport && (now - window.lastReport < interval)) return;
       window.lastReport = now;
 
       const payload = {
@@ -695,7 +829,7 @@
 
       // Feedback visual de TX
       bigClock.classList.add("tx-pulse");
-      linkStatus.textContent = `LINK: TX → /api/reports (${mode.toUpperCase()})`;
+      linkStatus.textContent = `LINK: TX → /api/reports (${(modeTag || mode).toUpperCase()})`;
       linkStatus.style.color = "var(--accent3)";
       setTimeout(() => {
         bigClock.classList.remove("tx-pulse");
@@ -710,6 +844,88 @@
           headers: { 'Content-Type': 'application/json' }
         }).catch(() => {});
       }
+    }
+
+    /* ================= ALERTA GLOBAL ================= */
+    function beepOnce() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.value = 0.2;
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+
+        setTimeout(() => {
+          osc.stop();
+          ctx.close();
+        }, 400);
+      } catch (e) {
+        console.warn("Audio no disponible:", e);
+      }
+    }
+
+    function handleAlertLevel(level) {
+      alertStatus.textContent = `ALERTA GLOBAL: ${level}`;
+      alertStatus.style.color = "var(--accent2)";
+      bigClock.classList.remove("alert-watch", "alert-warning");
+
+      if (!remoteConfig.alerts_enabled) {
+        return;
+      }
+
+      if (level === "warning_demo") {
+        bigClock.classList.add("alert-warning");
+        alertStatus.style.color = "var(--danger)";
+        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+        beepOnce();
+      } else if (level === "watch") {
+        bigClock.classList.add("alert-watch");
+        alertStatus.style.color = "var(--warn)";
+        if (navigator.vibrate) navigator.vibrate(80);
+      }
+    }
+
+    async function fetchRemoteConfig() {
+      try {
+        const res = await fetch(CONFIG_URL, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        remoteConfig = {
+          demo_gain: typeof data.demo_gain === "number" ? data.demo_gain : 1.0,
+          report_interval_ms: typeof data.report_interval_ms === "number" ? data.report_interval_ms : 5000,
+          mode_hint: typeof data.mode_hint === "string" ? data.mode_hint : "auto",
+          alerts_enabled: typeof data.alerts_enabled === "boolean" ? data.alerts_enabled : true
+        };
+      } catch (e) {
+        console.warn("No se pudo leer /api/config:", e);
+      }
+    }
+
+    async function fetchGlobalAlert() {
+      try {
+        const res = await fetch(REPORT_URL, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const level = data.alert_level || "none";
+        if (level !== lastAlertLevel) {
+          lastAlertLevel = level;
+          handleAlertLevel(level);
+        }
+      } catch (e) {
+        console.warn("No se pudo leer alerta global:", e);
+      }
+    }
+
+    function startControlLoops() {
+      fetchRemoteConfig();
+      fetchGlobalAlert();
+      setInterval(fetchRemoteConfig, 10000);
+      setInterval(fetchGlobalAlert, 5000);
     }
 
     /* ================= HANDLERS DE SENSORES ================= */
@@ -739,6 +955,7 @@
     async function init() {
       getGeolocation();
       syncTime();
+      startControlLoops();
 
       if (typeof DeviceMotionEvent !== 'undefined' &&
           typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -761,11 +978,14 @@
     document.getElementById('startBtn').onclick = init;
     document.getElementById('stopBtn').onclick = () => {
       window.removeEventListener('devicemotion', handleMotion);
-      bigClock.classList.remove('ready');
+      bigClock.classList.remove('ready', 'tx-pulse', 'alert-watch', 'alert-warning');
       modeLabel.textContent = "DETENIDO";
       linkStatus.textContent = "LINK: Inactivo (sin TX)";
       linkStatus.style.color = "var(--warn)";
+      alertStatus.textContent = "ALERTA GLOBAL: ninguna";
+      alertStatus.style.color = "var(--accent2)";
+      setLEDState("idle");
     };
   </script>
 </body>
-</html>
+  </html>
