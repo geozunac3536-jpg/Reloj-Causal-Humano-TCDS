@@ -1,91 +1,119 @@
 Reloj Causal Humano — TCDS
+TCDS Causal Clock v1.5 — Sistema Predictivo Sísmico (TRL-6)
 Copyright (c) Genaro Carrasco Ozuna
 
-Este repositorio se distribuye, salvo indicación en contrario, bajo la licencia:
+DOI: 10.5281/zenodo.17677864
+ORCID: 0009-0005-6358-9910
+
+------------------------------------------------------------
+1) LICENCIA PÚBLICA — CC BY-NC-SA 4.0
+------------------------------------------------------------
+
+Este repositorio y su contenido se distribuyen —salvo indicación expresa en contrario—
+bajo la licencia:
 
   Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
   (CC BY-NC-SA 4.0)
 
-Resumen (no sustituye al texto legal completo):
-- Atribución obligatoria a "Genaro Carrasco Ozuna" y a la Teoría Cromodinámica Sincrónica (TCDS).
-- Uso NO comercial permitido, con obligación de compartir trabajos derivados bajo la misma licencia.
-- Para uso comercial, integración en productos cerrados o explotación industrial,
-  se requiere un acuerdo específico de licencia TCDS-Σ-FET / TCDS-Commercial,
-  negociado directamente con el autor.
+Resumen (NO sustituye al texto legal completo):
 
-Texto legal completo de la licencia CC BY-NC-SA 4.0:
+- Se requiere atribución explícita a:
+  - "Genaro Carrasco Ozuna", y
+  - la "Teoría Cromodinámica Sincrónica (TCDS)".
+
+- Se permite el uso NO comercial para:
+  - investigación científica,
+  - docencia,
+  - auditoría técnica,
+  - experimentación personal.
+
+- Cualquier obra derivada (código, documentación, visualizaciones, datasets)
+  debe mantenerse bajo la MISMA licencia (Share-Alike).
+
+- Queda PROHIBIDO:
+  - cualquier uso con fines comerciales o industriales,
+  - integración en productos o servicios de pago,
+  - uso en entornos corporativos, aseguradoras, fondos de inversión,
+    gobiernos o plataformas de riesgo, sin licencia comercial específica.
+
+Texto legal completo CC BY-NC-SA 4.0:
 https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
-# ⚠️ TCDS Causal Clock v1.5 - Industrial & Commercial Notice
+------------------------------------------------------------
+2) LICENCIA COMERCIAL — TCDS-Σ-FET / TCDS-Commercial License
+------------------------------------------------------------
 
-> **TECHNOLOGY READINESS LEVEL (TRL): 6**
-> *System Validated in Relevant Environment (Distributed Web/Mobile Network)*
+Cualquier uso del sistema TCDS Causal Clock v1.5 y sus derivados en:
 
-## 🛑 CONDICIONES DE USO Y LICENCIAMIENTO
+  - aseguradoras,
+  - gobiernos y protección civil,
+  - centros sísmicos,
+  - empresas tecnológicas,
+  - plataformas de scoring y riesgo,
+  - proyectos con fines de lucro directo o indirecto,
 
-Este software está protegido bajo la licencia **CC BY-NC-SA 4.0** (Atribución - No Comercial - Compartir Igual).
+REQUERIRÁ un acuerdo de licencia comercial TCDS-Σ-FET / TCDS-Commercial
+firmado directamente con el autor.
 
-**LO QUE ESTO SIGNIFICA PARA USTED:**
-1.  **Uso Científico/Personal:** Gratuito. Puede auditar el código y desplegar nodos personales.
-2.  **Uso Comercial/Gubernamental:** ESTRICTAMENTE PROHIBIDO sin una Licencia Comercial Enterprise.
-    * Si usted representa a una **Aseguradora, Gobierno, Fondo de Inversión o Entidad Corporativa**, el uso de este código, su API o los datos generados (Data-Stream) para toma de decisiones, análisis de riesgo o lucro requiere un acuerdo de **Transferencia de Tecnología**.
+La licencia comercial puede incluir, entre otros:
 
-**🚫 AVISO A INVERSIONISTAS Y PARTNERS:**
-Este proyecto no acepta propuestas de desarrollo a cambio de equidad ("sweat equity") ni compras de IP por debajo de la valoración de mercado para activos TRL 6 con DOI registrado. El algoritmo de Filtrado Shannon/Arnold es propiedad intelectual cerrada para implementaciones comerciales.
+  - acceso a parámetros avanzados del backend (Shannon/Arnold),
+  - constantes de calibración predictiva,
+  - módulos extendidos de E-Veto Industrial,
+  - documentación técnica cerrada,
+  - soporte de integración y despliegue,
+  - certificados de Transferencia de Tecnología.
 
-**CONTACTO PARA LICENCIA ENTERPRISE:**
-[geozunac3536@gmail.com]
-TCDS Causal Clock v1.5 — Dual Licensing Model
-Copyright (C) 2025 Genaro Carrasco Ozuna
-ORCID: 0009-0005-6358-9910
-DOI: 10.5281/zenodo.17677864
+Sin un contrato de licencia comercial en vigor:
 
-------------------------------------------------------
-1) PUBLIC LICENSE — CC BY-NC-SA 4.0
-------------------------------------------------------
-You are free to:
- - Share, copy, redistribute
- - Adapt, remix, transform
+  - TODO uso comercial/industrial queda TERMINANTEMENTE PROHIBIDO.
+  - TODO uso para toma de decisiones de riesgo (sísmico, financiero,
+    estructural o similar) queda fuera del alcance autorizado.
 
-Under the following terms:
- - Attribution required
- - Non-Commercial only
- - Share-Alike required
- - No liability, no warranty
+------------------------------------------------------------
+3) CAPA PROPIETARIA (OPEN CORE + CAJA NEGRA)
+------------------------------------------------------------
 
-Full license text:
-https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+Este repositorio funciona como un modelo "Open Core":
 
-------------------------------------------------------
-2) COMMERCIAL LICENSE — TCDS-Commercial Enterprise License
-------------------------------------------------------
-Any commercial, industrial, governmental or risk-analysis use
-REQUIRES a paid Enterprise Agreement, including but not limited to:
+  - La parte pública (index.html, dashboard.html, endpoints básicos) demuestra
+    el funcionamiento conceptual del Reloj Causal Humano — TCDS.
 
- - Insurance companies
- - Government, Civil Protection
- - Risk scoring platforms
- - Seismic monitoring centers
- - Corporate AI integrations
- - Hardware + sensor networks
- - Data pipelines based on /api/reports
+  - La parte propietaria (calibraciones finas, parámetros de producción,
+    lógica avanzada de inferencia Σ, extensiones del motor Shannon/Arnold,
+    pipelines completos de predicción) NO se distribuye públicamente y se
+    mantiene como propiedad intelectual reservada del autor.
 
-Enterprise License grants:
- - Production-grade parameters (Shannon/Arnold)
- - Access to calibration constants
- - Proprietary E-Veto Industrial
- - Priority support
- - Multi-node private dashboards
- - Legal transfer-of-technology certificate
+Cualquier intento de reconstruir, clonar o explotar comercialmente esta capa
+propietaria sin acuerdo de licencia constituye una violación contractual y
+de derechos de autor.
 
-Without an active Enterprise License, ALL commercial use is forbidden.
+------------------------------------------------------------
+4) ADVERTENCIA A INVERSIONISTAS Y PARTNERS
+------------------------------------------------------------
 
-Contact:
-Geozunac3536@gmail.com Tel/WA +52 8125989868
+Este proyecto NO acepta:
 
-------------------------------------------------------
-Legal Summary:
-- Public repo = Open for research.
-- Predictive engine + calibrations = Proprietary.
-- Any monetization, risk scoring or operational use = License required.
+  - propuestas de "sweat equity",
+  - compras de IP por debajo de la valoración de mercado propia de activos
+    TRL 6 con DOI registrado,
+  - cesiones amplias de derechos a cambio de promesas vagas de inversión.
 
+La tecnología TCDS Causal Clock v1.5 debe evaluarse como infraestructura
+crítica digital y sistema de análisis predictivo especializado, no como
+software de propósito general.
+
+------------------------------------------------------------
+5) CONTACTO PARA LICENCIAS ENTERPRISE Y TRANSFERENCIA DE TECNOLOGÍA
+------------------------------------------------------------
+
+Para licencias comerciales, acuerdos Enterprise, integración institucional
+o Transferencia de Tecnología TCDS-Σ-FET / TCDS-Commercial, contacte a:
+
+  Autor   : Genaro Carrasco Ozuna
+  Email   : geozunac3536@gmail.com
+  Teléfono: +52 812 598 9868 (México)
+
+------------------------------------------------------------
+FIN DEL AVISO DE LICENCIA
+------------------------------------------------------------
