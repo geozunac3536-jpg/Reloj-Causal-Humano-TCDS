@@ -1,0 +1,80 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@id": "#reloj-causal-v1-5",
+      "@type": "SoftwareSourceCode",
+      "name": "TCDS_Reloj_Causal_v1.5 — Reloj Causal Humano (Filtro Shannon/Arnold)",
+      "alternateName": "TCDS Human Causal Clock v1.5",
+      "version": "1.5.0",
+      "description": "Nodo web experimental de la Teoría Cromodinámica Sincrónica (TCDS) que utiliza los sensores de un dispositivo móvil para estimar métricas de coherencia (ΔH, LI, R) y reportarlas a un backend distribuido. La versión pública funciona como Open Core demostrativo; el ajuste fino predictivo y la capa industrial se reservan bajo TCDS-Σ-FET / TCDS-Commercial.",
+      "url": "https://reloj-causal-humano-tcds.vercel.app/",
+      "codeRepository": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS",
+      "programmingLanguage": "JavaScript",
+      "runtimePlatform": "Web browser + Vercel serverless",
+      "applicationCategory": "ScientificApplication",
+      "applicationSubCategory": "Seismic Early Warning, Coherence Metrics, Time-Series Visualization",
+      "operatingSystem": "Android, iOS, Web",
+      "identifier": [
+        "https://doi.org/10.5281/zenodo.17677864"
+      ],
+      "license": [
+        "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        {
+          "@id": "#tcds-commercial-license",
+          "@type": "CreativeWork",
+          "name": "TCDS-Σ-FET / TCDS-Commercial License",
+          "description": "Licencia comercial propietaria para el uso del Reloj Causal Humano — TCDS y sus derivados en contextos asegurador, gubernamental, industrial y de gestión de riesgo. Requerida para cualquier uso con fines de lucro directo o indirecto, despliegue institucional o integración en infraestructura crítica.",
+          "license": "proprietary",
+          "creator": { "@id": "#genaro" }
+        }
+      ],
+      "isAccessibleForFree": true,
+      "keywords": [
+        "Teoría Cromodinámica Sincrónica",
+        "TCDS",
+        "Reloj Causal Humano",
+        "Shannon Entropy",
+        "Seismic Early Warning",
+        "Coherence Metrics",
+        "TRL6",
+        "Open Core",
+        "Q-driven"
+      ],
+      "author": { "@id": "#genaro" },
+      "creator": { "@id": "#genaro" },
+      "maintainer": { "@id": "#genaro" },
+      "offers": {
+        "@id": "#enterprise-offer",
+        "@type": "Offer",
+        "name": "Licenciamiento Enterprise TCDS-Σ-FET / TCDS-Commercial",
+        "businessFunction": "ProvideService",
+        "availability": "InStock",
+        "url": "mailto:geozunac3536@gmail.com",
+        "seller": { "@id": "#genaro" },
+        "priceSpecification": {
+          "@type": "PriceSpecification",
+          "priceCurrency": "USD",
+          "description": "La valoración económica se negocia caso por caso, bajo el criterio de activo TRL 6 para infraestructura crítica digital. No se aceptan propuestas de 'sweat equity' ni compras de IP subvaluadas."
+        }
+      }
+    },
+    {
+      "@id": "#genaro",
+      "@type": "Person",
+      "name": "Genaro Carrasco Ozuna",
+      "givenName": "Genaro",
+      "familyName": "Carrasco Ozuna",
+      "email": "mailto:geozunac3536@gmail.com",
+      "telephone": "+52-812-598-9868",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Proyecto TCDS / Motor Sincrónico de Luz (MSL)"
+      },
+      "identifier": [
+        "https://orcid.org/0009-0005-6358-9910",
+        "https://doi.org/10.5281/zenodo.17677864"
+      ]
+    }
+  ]
+}
