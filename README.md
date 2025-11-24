@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg)](https://doi.org/10.5281/zenodo.17677864)
 # Reloj Causal Humano — TCDS
 
 Este repositorio contiene un nodo web experimental de la **Teoría Cromodinámica Sincrónica (TCDS)** que utiliza los sensores del dispositivo móvil para visualizar, en tiempo real:
