@@ -51,7 +51,82 @@ Este nodo se enmarca en el paradigma TCDS como:
 - Fase actual:
   - **Lectura φ-driven y t_C-driven** sin Filtro de Honestidad aún (E-Veto pendiente).
   - Próximos pasos: integrar métricas Σ (LI, R, ΔH) sobre series de tiempo de \(|a|\) y acoples con texto (sincronograma psíquico).
+# ⚠️ TCDS Causal Clock v1.5 — Industrial & Commercial Notice  
+**Technology Readiness Level (TRL): 6**  
+*Validated in Relevant Environment — Distributed Web/Mobile Network*
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg)](https://doi.org/10.5281/zenodo.17677864)
+
+---
+
+## 🛑 Condiciones de Uso y Licenciamiento
+
+Este software está protegido por **Licencia Dual**:
+
+### **1) Licencia Pública — CC BY-NC-SA 4.0**
+Uso permitido:
+- Auditoría científica  
+- Investigación académica  
+- Uso personal / educativo / no lucrativo  
+- Forks con obligación de compartir igual  
+
+Restricciones:
+- **Prohibido** usarlo para toma de decisiones financieras, gubernamentales, industriales o de riesgo.  
+- **Prohibido** integrar el código en cualquier producto remunerado.  
+
+---
+
+### **2) Licencia Comercial — TCDS-Commercial License (Enterprise)**  
+Requerida para:
+- Aseguradoras  
+- Gobiernos / Protección Civil  
+- Centros sísmicos  
+- Fondos de inversión  
+- Empresas tecnológicas  
+- Plataformas de riesgo y scoring  
+
+Incluye:
+- Parámetros avanzados del backend  
+- Modelo predictivo calibrado (Shannon/Arnold)  
+- E-Veto industrial  
+- Protocolos ΣFET  
+- Soporte técnico + integración  
+
+🔒 *Las versiones públicas de `/api/reports` y `/api/config` contienen valores genéricos.  
+La calibración profesional es propietaria y NO está en GitHub.*
+
+Para licencias Enterprise:  
+📧 **genarocarrasco.ozuna@gmail.com**  
+
+---
+
+## 🧠 Filosofía del Proyecto
+El sistema TCDS v1.5 sustituye infraestructura física de alto costo (sismógrafos + estaciones GNSS) con una red digital distribuida de costo marginal cero, basada en **coherencia Q-driven**, métricas Σ y un backend auditable (E-Veto).
+
+---
+
+## 📌 Arquitectura del Sistema
+- **index.html** → Nodo móvil / sensor local  
+- **dashboard.html** → Master Node / control global  
+- **/api/reports** → Ingesta, agregados, Alerta TCDS  
+- **/api/config** → Control remoto de nodos  
+- **metadata/** → JSON-LD oficial  
+- **docs/** → Dossier TRL-6 y PDFs  
+
+---
+
+## 🧷 Declaración para Corporativos
+**Este repositorio NO acepta compras oportunistas ni propuestas a descuento.**
+
+Toda la propiedad intelectual está registrada vía DOI, ORCID y metadatos JSON-LD.  
+Cualquier uso indebido puede derivar en un **CEASE & DESIST internacional**.
+
+---
+
+## 📄 Citación
+Genaro Carrasco Ozuna (2025).  
+**TCDS — Reloj Causal Humano v1.5 (TRL-6)**.  
+DOI: 10.5281/zenodo.17677864.
 ---
 ## DOI y referencia
 
