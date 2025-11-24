@@ -3,12 +3,12 @@
   "@type": "SoftwareSourceCode",
   "name": "TCDS_Reloj_Causal_v1.5 — Reloj Causal Humano (Σ-Metrics, Shannon Entropy & Arnold Filter)",
   "alternateName": "TCDS Human Causal Clock v1.5",
-  "identifier": "10.5281/zenodo.17677864",
+  "identifier": "https://doi.org/10.5281/zenodo.17677864",
   "description": "Nodo web científico basado en la Teoría Cromodinámica Sincrónica (TCDS) para medir en tiempo real coherencia Σ (LI, R, RMSE_SL), entropía de Shannon normalizada (ΔH) y nitidez espectral tipo Arnold (Q_Arnold), evaluando señales mediante el Filtro de Honestidad (E-Veto) y proyectándolas en un Reloj Causal Humano.",
   "version": "1.5.0",
   "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-  "codeRepository": "https://github.com/geozunac3536-jpg/TCDS_Reloj_Causal_Humano",
-  "issueTracker": "https://github.com/geozunac3536-jpg/TCDS_Reloj_Causal_Humano/issues",
+  "codeRepository": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS",
+  "issueTracker": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS/issues",
   "downloadUrl": "https://zenodo.org/records/17677864",
   "url": "https://doi.org/10.5281/zenodo.17677864",
   "dateCreated": "2025-11-22",
@@ -65,6 +65,8 @@
       "familyName": "Carrasco Ozuna",
       "@id": "https://orcid.org/0009-0005-6358-9910",
       "identifier": "https://orcid.org/0009-0005-6358-9910",
+      "email": "mailto:geozunac3536@gmail.com",
+      "telephone": "+52-812-598-9868",
       "affiliation": {
         "@type": "Organization",
         "name": "Proyecto TCDS — Motor Sincrónico de Luz (MSL), México"
@@ -86,7 +88,10 @@
   ],
   "funding": [],
   "relatedLink": [
-    "https://doi.org/10.5281/zenodo.17677864"
+    "https://doi.org/10.5281/zenodo.17677864",
+    "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS",
+    "https://reloj-causal-humano-tcds.vercel.app/",
+    "https://geozunac3536-jpg.github.io/Reloj-Causal-Humano-TCDS/"
   ],
   "isPartOf": {
     "@type": "CreativeWorkSeries",
