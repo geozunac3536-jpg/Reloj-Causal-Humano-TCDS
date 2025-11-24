@@ -53,7 +53,13 @@ Este nodo se enmarca en el paradigma TCDS como:
   - Próximos pasos: integrar métricas Σ (LI, R, ΔH) sobre series de tiempo de \(|a|\) y acoples con texto (sincronograma psíquico).
 
 ---
+## DOI y referencia
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg)](https://doi.org/10.5281/zenodo.17677864)
+
+Si utilizas el **Reloj Causal Humano TCDS** en publicaciones científicas o técnicas, cita:
+
+> Carrasco Ozuna, G. (2025). *TCDS_Reloj_Causal_v1.5 — Reloj Causal Humano (Filtro Shannon/Arnold, Σ-metrics y Sincronización Q-Driven)* (Version v1) [Software]. Zenodo. https://doi.org/10.5281/zenodo.17677864
 ## Autoría y contacto
 
 - **Autor / Arquitecto causal:** Genaro Carrasco Ozuna  
