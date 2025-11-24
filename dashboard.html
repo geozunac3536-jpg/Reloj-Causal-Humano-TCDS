@@ -37,7 +37,6 @@
       gap: 20px;
     }
 
-    /* HEADER */
     header {
       border-bottom: 1px solid rgba(255,255,255,0.1);
       padding-bottom: 15px;
@@ -68,7 +67,6 @@
     .status-warn { color: var(--warn); border-color: var(--warn); background: rgba(249,115,22,0.1); }
     .status-err { color: var(--danger); border-color: var(--danger); background: rgba(255,107,107,0.1); }
 
-    /* GRID LAYOUT */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -91,7 +89,6 @@
       margin-bottom: 15px;
     }
 
-    /* KPI BOXES */
     .kpi-container {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -107,13 +104,11 @@
     .kpi-val { font-size: 24px; font-weight: 700; color: var(--fg); }
     .kpi-lbl { font-size: 10px; color: var(--accent); opacity: 0.8; margin-top: 4px; }
 
-    /* CHART CONTAINER */
     .chart-box {
       height: 300px;
       position: relative;
     }
 
-    /* CONTROL PANEL */
     .control-row {
       display: flex;
       flex-wrap: wrap;
@@ -203,7 +198,7 @@
       </div>
       <div style="margin-top:15px; text-align:center;">
         <span style="font-size:11px; color:#888;">Nivel de Alerta Backend:</span>
-        <strong id="alert_level_display" style="color:var(--accent3); font-size:12px; text-transform:uppercase;">NONE</strong>
+        <strong id="alert_level_display" style="color:var(--ok); font-size:12px; text-transform:uppercase;">NONE</strong>
       </div>
     </div>
 
@@ -253,13 +248,10 @@
 
 <script>
   // ================= CONFIGURACIÓN =================
-  const ENDPOINT_REPORT = "/api/reports"; // mismo dominio
-  const ENDPOINT_CONFIG = "/api/config";  // mismo dominio
+  // Si abres el dashboard desde GitHub Pages, apunta directo a Vercel:
+  const ENDPOINT_REPORT = "https://reloj-causal-humano-tcds-s7o4.vercel.app/api/reports";
+  const ENDPOINT_CONFIG = "https://reloj-causal-humano-tcds-s7o4.vercel.app/api/config";
 
-  // Misma llave que definas en la variable de entorno TCDS_CONFIG_KEY de Vercel
-  const DASHBOARD_KEY = "TCDS_CONFIG_DEV_KEY";
-
-  // ================= REFERENCIAS DOM =================
   const els = {
     nodes: document.getElementById('val_nodes'),
     events: document.getElementById('val_events'),
@@ -275,7 +267,6 @@
   let charts = {};
   let alertsEnabled = true;
 
-  // ================= GRÁFICA (Chart.js) =================
   function initChart() {
     const ctx = document.getElementById('mainChart').getContext('2d');
     charts.main = new Chart(ctx, {
@@ -285,7 +276,7 @@
         datasets: [
           {
             label: 'Entropía Shannon (ΔH)',
-            borderColor: '#ff6bff', // accent2
+            borderColor: '#ff6bff',
             backgroundColor: 'rgba(255, 107, 255, 0.1)',
             data: [],
             borderWidth: 2,
@@ -294,7 +285,7 @@
           },
           {
             label: 'Locking Index (LI)',
-            borderColor: '#35e0ff', // accent
+            borderColor: '#35e0ff',
             backgroundColor: 'rgba(53, 224, 255, 0.1)',
             data: [],
             borderWidth: 2,
@@ -322,35 +313,29 @@
     });
   }
 
-  // ================= LÓGICA DE DATOS =================
   async function fetchData() {
     try {
       const res = await fetch(ENDPOINT_REPORT);
-      if(!res.ok) throw new Error("API Error");
+      if (!res.ok) throw new Error("API Error");
       const data = await res.json();
 
-      // 1. Estado conexión
       els.status.className = "status-badge status-ok";
       els.status.textContent = "CONECTADO: TCDS MASTER";
 
-      // 2. KPIs
       els.nodes.textContent = data.active_nodes || 0;
       els.events.textContent = data.cached_events || 0;
-      
+
       const dh = data.dh_mean;
       const li = data.li_mean;
-      
       els.dh.textContent = typeof dh === 'number' ? dh.toFixed(3) : '--';
       els.li.textContent = typeof li === 'number' ? li.toFixed(2) : '--';
 
-      // 3. Alerta Visual
       const level = data.alert_level || 'none';
       els.alertDisplay.textContent = level.toUpperCase();
-      if(level === 'warning_demo') els.alertDisplay.style.color = 'var(--danger)';
-      else if(level === 'watch') els.alertDisplay.style.color = 'var(--warn)';
+      if (level === 'warning_demo') els.alertDisplay.style.color = 'var(--danger)';
+      else if (level === 'watch') els.alertDisplay.style.color = 'var(--warn)';
       else els.alertDisplay.style.color = 'var(--accent3)';
 
-      // 4. Gráfica
       if (data.latest_raw && Array.isArray(data.latest_raw)) {
         const history = [...data.latest_raw];
         charts.main.data.labels = history.map(e => new Date(e.time).toLocaleTimeString());
@@ -358,7 +343,6 @@
         charts.main.data.datasets[1].data = history.map(e => e.metrics.LI);
         charts.main.update();
       }
-
     } catch (e) {
       console.warn(e);
       els.status.className = "status-badge status-err";
@@ -366,23 +350,16 @@
     }
   }
 
-  // ================= LÓGICA DE CONTROL =================
   async function sendConfig(payload) {
     log(`Enviando config: ${JSON.stringify(payload)}...`);
     try {
       const res = await fetch(ENDPOINT_CONFIG, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-TCDS-KEY': DASHBOARD_KEY
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if(res.ok) {
-        log("Config aplicada correctamente.");
-      } else {
-        log("Error al aplicar config.");
-      }
+      if (res.ok) log("Config aplicada correctamente.");
+      else log("Error al aplicar config.");
     } catch (e) {
       log("Error de red al enviar config.");
     }
@@ -394,7 +371,7 @@
 
   function updateInterval() {
     const val = parseInt(els.intervalInput.value);
-    if(val > 100) sendConfig({ report_interval_ms: val });
+    if (val > 100) sendConfig({ report_interval_ms: val });
   }
 
   function toggleAlerts() {
@@ -404,11 +381,10 @@
     sendConfig({ alerts_enabled: alertsEnabled });
   }
 
-  // ================= INICIO =================
   window.onload = () => {
     initChart();
-    fetchData(); // Primer fetch inmediato
-    setInterval(fetchData, 2000); // Polling cada 2s
+    fetchData();
+    setInterval(fetchData, 2000);
   };
 </script>
 
