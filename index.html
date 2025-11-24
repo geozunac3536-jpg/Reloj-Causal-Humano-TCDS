@@ -543,8 +543,9 @@
 
   <script>
     /* ================= CONFIGURACIÓN TCDS ================= */
-    const REPORT_URL = "https://tcds-reloj-causal.vercel.app/api/reports";
-    const CONFIG_URL = "https://tcds-reloj-causal.vercel.app/api/config";
+    // ahora todo apunta al mismo dominio donde se aloja la página
+    const REPORT_URL = "/api/reports";
+    const CONFIG_URL = "/api/config";
     const DEVICE_ID = (crypto.randomUUID ? crypto.randomUUID() : 'anon-' + Math.random());
 
     /* ================= VARIABLES DE ESTADO ================= */
@@ -624,7 +625,6 @@
         ledAlert.classList.add('on-red');
       }
 
-      // al pasar de no-alerta a alerta, zumbido local
       if (state === "alert" && lastLocalState !== "alert") {
         beepOnce();
         if (navigator.vibrate) {
@@ -685,7 +685,7 @@
 
         if (mag > maxMag) {
           maxMag = mag;
-          peakFreq = k * (60 / N_FFT); // fs ≈ 60 Hz
+          peakFreq = k * (60 / N_FFT);
         }
       }
 
@@ -711,7 +711,7 @@
 
       const maxH = Math.log2(spectrum.length || 1);
       const normalizedH = maxH > 0 ? shannonH / maxH : 1;
-      current_dH = normalizedH - 1.0; // ΔH ∈ [−1,0]
+      current_dH = normalizedH - 1.0;
 
       document.getElementById('qLive').textContent = current_Q.toFixed(2);
       document.getElementById('peakLive').textContent = current_PeakFreq.toFixed(1);
@@ -744,7 +744,6 @@
       const noiseNorm = Math.min(std / 4, 1);
       let raw_LI = 1.0 - noiseNorm;
 
-      // demo_gain sólo afecta el tramo demo (puedes usarlo para exagerar variaciones)
       const gain = remoteConfig.demo_gain || 1.0;
       if (mode === "demo") {
         raw_LI = Math.max(0, Math.min(1, raw_LI * gain));
@@ -775,7 +774,6 @@
       document.getElementById('rLive').textContent = current_R.toFixed(2);
       document.getElementById('dHLive').textContent = current_dH.toFixed(3);
 
-      // decidir modo efectivo con pista remota
       let effectiveMode = mode;
       if (remoteConfig.mode_hint === "force_demo") {
         effectiveMode = "demo";
@@ -783,7 +781,6 @@
         effectiveMode = "scientific";
       }
 
-      // Clasificación local de estado para LEDs
       let state = "idle";
       if (current_LI >= 0.9 && current_dH < -0.5) {
         state = "alert";
@@ -827,7 +824,6 @@
 
       const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
 
-      // Feedback visual de TX
       bigClock.classList.add("tx-pulse");
       linkStatus.textContent = `LINK: TX → /api/reports (${(modeTag || mode).toUpperCase()})`;
       linkStatus.style.color = "var(--accent3)";
@@ -988,4 +984,4 @@
     };
   </script>
 </body>
-  </html>
+</html>
