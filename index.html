@@ -542,11 +542,10 @@
   </div>
 
   <script>
-    /* ================= CONFIGURACIÓN TCDS ================= */
-    // ahora todo apunta al mismo dominio donde se aloja la página
-    const REPORT_URL = "/api/reports";
-    const CONFIG_URL = "/api/config";
-    const DEVICE_ID = (crypto.randomUUID ? crypto.randomUUID() : 'anon-' + Math.random());
+    // ================= CONFIGURACIÓN TCDS =================
+// Siempre relativo al mismo dominio donde viva el reloj
+const REPORT_URL = "/api/reports";
+const CONFIG_URL = "/api/config";
 
     /* ================= VARIABLES DE ESTADO ================= */
     let accelBuffer = [];
