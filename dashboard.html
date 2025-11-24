@@ -203,7 +203,7 @@
       </div>
       <div style="margin-top:15px; text-align:center;">
         <span style="font-size:11px; color:#888;">Nivel de Alerta Backend:</span>
-        <strong id="alert_level_display" style="color:var(--ok); font-size:12px; text-transform:uppercase;">NONE</strong>
+        <strong id="alert_level_display" style="color:var(--accent3); font-size:12px; text-transform:uppercase;">NONE</strong>
       </div>
     </div>
 
@@ -253,8 +253,11 @@
 
 <script>
   // ================= CONFIGURACIÓN =================
-  const ENDPOINT_REPORT = "/api/reports"; // Relativo (mismo dominio)
-  const ENDPOINT_CONFIG = "/api/config";  // Relativo (mismo dominio)
+  const ENDPOINT_REPORT = "/api/reports"; // mismo dominio
+  const ENDPOINT_CONFIG = "/api/config";  // mismo dominio
+
+  // Misma llave que definas en la variable de entorno TCDS_CONFIG_KEY de Vercel
+  const DASHBOARD_KEY = "TCDS_CONFIG_DEV_KEY";
 
   // ================= REFERENCIAS DOM =================
   const els = {
@@ -326,11 +329,11 @@
       if(!res.ok) throw new Error("API Error");
       const data = await res.json();
 
-      // 1. Actualizar Estado Conexión
+      // 1. Estado conexión
       els.status.className = "status-badge status-ok";
       els.status.textContent = "CONECTADO: TCDS MASTER";
 
-      // 2. Actualizar KPIs
+      // 2. KPIs
       els.nodes.textContent = data.active_nodes || 0;
       els.events.textContent = data.cached_events || 0;
       
@@ -340,19 +343,16 @@
       els.dh.textContent = typeof dh === 'number' ? dh.toFixed(3) : '--';
       els.li.textContent = typeof li === 'number' ? li.toFixed(2) : '--';
 
-      // 3. Actualizar Alerta Visual
+      // 3. Alerta Visual
       const level = data.alert_level || 'none';
       els.alertDisplay.textContent = level.toUpperCase();
       if(level === 'warning_demo') els.alertDisplay.style.color = 'var(--danger)';
       else if(level === 'watch') els.alertDisplay.style.color = 'var(--warn)';
       else els.alertDisplay.style.color = 'var(--accent3)';
 
-      // 4. Actualizar Gráfica
+      // 4. Gráfica
       if (data.latest_raw && Array.isArray(data.latest_raw)) {
-        // La API devuelve los últimos 50. Chart.js lee de izq a der.
-        // Aseguramos orden cronológico (antiguo -> nuevo)
-        const history = [...data.latest_raw]; 
-        
+        const history = [...data.latest_raw];
         charts.main.data.labels = history.map(e => new Date(e.time).toLocaleTimeString());
         charts.main.data.datasets[0].data = history.map(e => e.metrics.dH);
         charts.main.data.datasets[1].data = history.map(e => e.metrics.LI);
@@ -372,11 +372,17 @@
     try {
       const res = await fetch(ENDPOINT_CONFIG, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-TCDS-KEY': DASHBOARD_KEY
+        },
         body: JSON.stringify(payload)
       });
-      if(res.ok) log("Config aplicada correctamente.");
-      else log("Error al aplicar config.");
+      if(res.ok) {
+        log("Config aplicada correctamente.");
+      } else {
+        log("Error al aplicar config.");
+      }
     } catch (e) {
       log("Error de red al enviar config.");
     }
