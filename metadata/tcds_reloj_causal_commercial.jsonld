@@ -1,0 +1,166 @@
+{
+  "@context": {
+    "@vocab": "https://schema.org/",
+    "tcds": "https://tcds.msldata.mx/ontology#",
+    "hasModule": "tcds:hasModule",
+    "hasMetric": "tcds:hasMetric",
+    "hasEvent": "tcds:hasEvent",
+    "hasHardware": "tcds:hasHardware",
+    "hasService": "tcds:hasService",
+    "hasEvidence": "tcds:hasEvidence",
+    "hasTRL": "tcds:hasTRL",
+    "hasCost": "tcds:hasCost"
+  },
+
+  "@type": "TechProduct",
+  "name": "TCDS Reloj Causal Humano — Plataforma Predictiva v1.5",
+  "alternateName": "Human Causal Clock TCDS",
+  "description": "Sistema integrado de medición coherencial basado en TCDS (Teoría Cromodinámica Sincrónica) para auditoría humana en tiempo real, análisis de entropía, locking dinámico, Q-driven metrics y señales precursoras de ruptura coherencial, aplicable a predicción sísmica, neurodinámica y sistemas distribuidos.",
+  "productID": "TCDS-RCH-1.5",
+
+  "creator": {
+    "@type": "Person",
+    "name": "Genaro Carrasco Ozuna",
+    "affiliation": "Proyecto TCDS / Motor Sincrónico de Luz",
+    "email": "genarocarrasco.ozuna@gmail.com",
+    "identifier": "https://orcid.org/0009-0005-6358-9910",
+    "nationality": "MX"
+  },
+
+  "url": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS",
+  "discussionUrl": "https://reloj-causal-humano-tcds.vercel.app/dashboard.html",
+  "sameAs": "https://doi.org/10.5281/zenodo.17677864",
+
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/",
+    "TCDS-Commercial License 1.0 (uso propietario, hardware ΣFET, predicción sísmica, despliegue industrial)"
+  ],
+
+  "dateCreated": "2024-09-15",
+  "dateModified": "2025-11-22",
+  "hasTRL": "TRL 6 — Prototipo demostrado en entorno relevante (Vercel + nodos móviles distribuidos)",
+
+  "hasModule": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Nodo Local — index.html",
+      "operatingSystem": "Android / iOS / WebView",
+      "applicationCategory": "Sensor Fusion / FFT / Shannon Entropy",
+      "featureList": [
+        "Acelerómetro en tiempo real",
+        "Espectro FFT 60 Hz",
+        "ΔH Shannon normalizada",
+        "LI (Locking Index)",
+        "R (Kuramoto proxy)",
+        "Q_Arnold",
+        "Filtro E-Veto (ΔH < 0)",
+        "Auto-diagnóstico de coherencia"
+      ]
+    },
+
+    {
+      "@type": "WebApplication",
+      "name": "Dashboard Global — dashboard.html",
+      "featureList": [
+        "Ingreso desde Vercel",
+        "Chart.js tiempo real",
+        "Interpretación LI vs ΔH",
+        "Control remoto del nodo",
+        "Modos: Auto, Científico, Demo",
+        "Intervalos de reporte ajustables",
+        "Alertas visuales y sonoras",
+        "Nivel de alerta backend"
+      ]
+    },
+
+    {
+      "@type": "WebAPI",
+      "name": "API Master Node (Serverless)",
+      "hasPart": [
+        {
+          "@type": "WebAPI",
+          "name": "/api/reports",
+          "description": "Buffer circular en memoria: agrega eventos, calcula promedios, expone trazas de 5 minutos."
+        },
+        {
+          "@type": "WebAPI",
+          "name": "/api/config",
+          "description": "Canal de comando unificado para nodos móviles (modo operación, intervalos, alertas)."
+        }
+      ]
+    }
+  ],
+
+  "hasMetric": [
+    {
+      "@type": "PropertyValue",
+      "name": "ΔH (Shannon Entropy)",
+      "unitCode": "N/A",
+      "valueRange": "-1 a 0",
+      "application": "Filtro E-Veto, orden vs ruido"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "LI (Locking Index)",
+      "valueRange": "0 a 1",
+      "application": "Estabilidad de señal"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "R (Kuramoto proxy)",
+      "valueRange": "0.5–1",
+      "application": "Coherencia de fase relativa"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Q_Arnold",
+      "valueRange": "0–1",
+      "application": "Nitidez espectral precursor de ruptura"
+    }
+  ],
+
+  "hasHardware": [
+    { "@type": "Sensor", "name": "Acelerómetro 3D" },
+    { "@type": "Sensor", "name": "Gyro Sensor" },
+    { "@type": "Sensor", "name": "Proximity Sensor" },
+    { "@type": "Sensor", "name": "Motion Detect" },
+    { "@type": "Sensor", "name": "Grip Notifier" },
+    { "@type": "Sensor", "name": "Light CCT IR" }
+  ],
+
+  "hasService": [
+    {
+      "@type": "Service",
+      "name": "Sistema Predictivo Sísmico TCDS",
+      "serviceOutput": [
+        "Ruptura coherencial ΔH<0 previamente al evento",
+        "Clasificador Resonancia/Precursor",
+        "Panel supervisado LI/ΔH integrable a SSN/USGS"
+      ]
+    }
+  ],
+
+  "hasEvidence": [
+    {
+      "@type": "Dataset",
+      "name": "Logs Vercel Master Node",
+      "description": "Evidencia del flujo real de nodos activos, ΔH y LI en operación continua."
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Modelo Predictivo Sísmico TCDS v1.5",
+      "description": "Aplicación directa sobre evento M7.1 Puebla-Morelos y ventanas históricas."
+    }
+  ],
+
+  "hasCost": {
+    "currency": "MXN",
+    "value": "Pendiente de cotización — requiere definir lotes, despliegue y número de nodos",
+    "costBreakdown": {
+      "Nodo software": "Licencia comercial + whitelabel",
+      "Backend Vercel": "Uso mensual según tráfico",
+      "Integración sísmica": "Servicio profesional",
+      "Hardware ΣFET (opcional)": "Cotización independiente"
+    }
+  }
+}
