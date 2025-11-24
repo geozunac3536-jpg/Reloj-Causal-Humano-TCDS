@@ -1,3 +1,29 @@
+# ⚠️ TCDS Causal Clock v1.5 - Industrial & Commercial Notice
+
+> **TECHNOLOGY READINESS LEVEL (TRL): 6**
+> *System Validated in Relevant Environment (Distributed Web/Mobile Network)*
+> **DOI:** [10.5281/zenodo.17677864](https://doi.org/10.5281/zenodo.17677864)
+
+---
+
+## 🛑 CONDICIONES DE USO Y LICENCIAMIENTO
+
+Este software es un activo de investigación científica protegido bajo la licencia **CC BY-NC-SA 4.0** (Atribución - No Comercial - Compartir Igual).
+
+### **LO QUE ESTO SIGNIFICA PARA USTED:**
+1.  **Uso Científico/Personal:** ✅ **GRATUITO.**
+    * Puede auditar el código, desplegar nodos personales y contribuir a la ciencia ciudadana.
+2.  **Uso Comercial/Gubernamental:** ⛔ **ESTRICTAMENTE PROHIBIDO.**
+    * Si usted representa a una **Aseguradora, Gobierno, Fondo de Inversión o Entidad Corporativa**, el uso de este código, su API o los datos generados (Data-Stream) para toma de decisiones, análisis de riesgo o lucro requiere un acuerdo de **Transferencia de Tecnología (TCDS-Commercial)**.
+
+> **🚫 AVISO A INVERSIONISTAS Y PARTNERS:**
+> Este proyecto no acepta propuestas de desarrollo a cambio de equidad ("sweat equity") ni compras de IP por debajo de la valoración de mercado para activos **TRL 6** con DOI registrado. El algoritmo de *Filtrado Shannon/Arnold* y la lógica *Q-Driven* son propiedad intelectual cerrada para implementaciones comerciales.
+
+**CONTACTO PARA LICENCIA ENTERPRISE:**
+📩 [geozunac3536@gmail.com,  8125989868]
+
+---
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg)](https://doi.org/10.5281/zenodo.17677864)
 # Reloj Causal Humano — TCDS
 
