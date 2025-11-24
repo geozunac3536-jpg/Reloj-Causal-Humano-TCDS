@@ -1,0 +1,276 @@
+{
+  "@context": {
+    "@vocab": "https://schema.org/",
+    "tcds": "https://tcds.mslschema.org/",
+    "E-Veto": "tcds:EVeto",
+    "SigmaMetrics": "tcds:SigmaMetrics",
+    "TCausal": "tcds:TCausal",
+    "QDrive": "tcds:QDrive",
+    "CGA": "tcds:CGA",
+    "Synchronon": "tcds:Synchronon"
+  },
+  "@type": "ResearchProject",
+  "@id": "https://geozunac3536-jpg.github.io/Reloj-Causal-Humano-TCDS/",
+  "name": "Reloj Causal Humano — TCDS y Sistema Predictivo Sísmico basados en Σ-metrics y Entropía de Shannon",
+  "alternateName": [
+    "TCDS ΣFET / SYNCTRON — Nodo Sensor Humano",
+    "TCDS Predictive Seismic System"
+  ],
+  "description": "Proyecto de investigación y desarrollo que extiende la Teoría Cromodinámica Sincrónica (TCDS) hacia un sistema distribuido de nodos sensores ('Reloj Causal Humano') y un Panel Global (Master Node) para evaluar coherencia informacional, entropía de Shannon y locking de fase (Σ-metrics) como base de un sistema predictivo sísmico auditable mediante el Filtro de Honestidad (E-Veto).",
+  "keywords": [
+    "Teoría Cromodinámica Sincrónica",
+    "TCDS",
+    "Reloj Causal Humano",
+    "ΣFET",
+    "SYNCTRON",
+    "Σ-metrics",
+    "LI",
+    "R(t)",
+    "ΔH",
+    "E-Veto",
+    "Sistema Predictivo Sísmico",
+    "Entropía de Shannon",
+    "Master Node",
+    "Termux",
+    "Android Sensors"
+  ],
+  "creator": {
+    "@type": "Person",
+    "name": "Genaro Carrasco Ozuna",
+    "identifier": [
+      "ORCID:0009-0005-6358-9910",
+      "https://orcid.org/0009-0005-6358-9910"
+    ],
+    "email": "genarocarrasco.ozuna@gmail.com",
+    "affiliation": {
+      "@type": "Organization",
+      "name": "Proyecto TCDS / Motor Sincrónico de Luz (MSL)",
+      "address": {
+        "@type": "Country",
+        "name": "México"
+      }
+    },
+    "jobTitle": "Arquitecto Causal y Autor de la Teoría Cromodinámica Sincrónica (TCDS)"
+  },
+  "author": {
+    "@id": "https://orcid.org/0009-0005-6358-9910"
+  },
+  "dateCreated": "2023-01",
+  "temporalCoverage": "2023-01/2025-11",
+  "url": "https://geozunac3536-jpg.github.io/Reloj-Causal-Humano-TCDS/",
+  "codeRepository": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS",
+  "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "funding": {
+    "@type": "Grant",
+    "name": "Autofinanciado por el autor — Fase de demostración y registro auditable",
+    "sponsor": {
+      "@type": "Person",
+      "name": "Genaro Carrasco Ozuna"
+    }
+  },
+
+  "about": [
+    {
+      "@type": "DefinedTerm",
+      "name": "Teoría Cromodinámica Sincrónica (TCDS)",
+      "termCode": "TCDS",
+      "description": "Marco teórico que postula la dinámica Q–Σ–φ–χ como ley universal de coherencia y persistencia ontológica sobre un sustrato discreto (CGA)."
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Reloj Causal Humano",
+      "description": "Nodo sensor ejecutado en un dispositivo móvil que mide aceleración, deriva de fase y entropía de Shannon para estimar el tiempo causal t_C y Σ-metrics locales.",
+      "termCode": "RCH-TCDS"
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Filtro de Honestidad (E-Veto)",
+      "description": "Criterio de validación que exige simultáneamente locking de fase alto (LI, R) y caída forzada de entropía (ΔH < umbral) para aceptar una señal como coherente Q-driven, evitando apofenia.",
+      "termCode": "E-Veto"
+    },
+    {
+      "@type": "DefinedTerm",
+      "name": "Sistema Predictivo Sísmico TCDS",
+      "description": "Aplicación de TCDS a la sismología, donde Σ-metrics y t_C se usan para discriminar ruido de precursores y réplicas mediante nodos humanos y estaciones instrumentales.",
+      "termCode": "TCDS-SPS"
+    }
+  ],
+
+  "developmentTimeline": {
+    "@type": "ItemList",
+    "name": "Línea de tiempo de construcción del Reloj Causal Humano y Sistema Predictivo Sísmico TCDS",
+    "itemListOrder": "https://schema.org/ItemListOrderAscending",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "item": {
+          "@type": "CreativeWork",
+          "name": "Formulación base de TCDS y Σ-χ",
+          "description": "Consolidación teórica de la dinámica Q–Σ–φ–χ, el Conjunto Granular Absoluto (CGA) y el sincronón σ como campo mediador de coherencia de corto alcance. Se definen Σ-metrics (LI, R(t), κΣ) y el tiempo causal t_C como gradiente de coherencia.",
+          "dateCreated": "2023-01"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "item": {
+          "@type": "CreativeWork",
+          "name": "Extensión hacia hardware de coherencia (ΣFET / SYNCTRON)",
+          "description": "Diseño conceptual de un transistor de coherencia (ΣFET) y del dispositivo SYNCTRON como plataforma de falsación TCDS. Se fijan KPIs de laboratorio para locking (LI ≥ 0.9, R > 0.95, RMSE_SL < 0.1, reproducibilidad ≥ 95%).",
+          "dateCreated": "2023-06"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "item": {
+          "@type": "CreativeWork",
+          "name": "Marco Σ-metrics Termux y primer demo sintético con E-Veto",
+          "description": "Implementación inicial en Termux (Android) de scripts para registrar aceleración, calcular Σ-metrics sintéticas y evaluar el Filtro de Honestidad (E-Veto) sobre datos de prueba, estableciendo la distinción φ-driven vs Q-driven.",
+          "dateCreated": "2024-03"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 4,
+        "item": {
+          "@type": "SoftwareApplication",
+          "name": "Demo 'TCDS Σ-metrics Termux — E-Veto sobre datos sintéticos'",
+          "description": "Ejercicio auditable en consola que recorre una ventana temporal completa sin locking válido (lapso φ-driven), usado como baseline de fricción/ruido para futuras detecciones de coherencia real.",
+          "applicationCategory": "Scientific",
+          "operatingSystem": "Android (Termux)",
+          "dateCreated": "2024-09"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 5,
+        "item": {
+          "@type": "SoftwareApplication",
+          "name": "Reloj Causal Humano — v1.x (Prototipo de nodo local)",
+          "description": "Primera versión del Reloj Causal Humano ejecutada en navegador móvil, usando DeviceMotion para estimar magnitud de aceleración, normalizar respecto a 9.8 m/s² y visualizar t_C como desviación coherencial. Se comienza a integrar entropía de Shannon de forma experimental.",
+          "applicationCategory": "SensorNode",
+          "operatingSystem": "Android / Navegador Web",
+          "dateCreated": "2024-10"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 6,
+        "item": {
+          "@type": "SoftwareApplication",
+          "name": "Integración formal de entropía de Shannon y Filtro E-Veto",
+          "description": "Se fija el uso de una FFT baja (0.2–7 Hz) como banda de interés, se calcula entropía de Shannon normalizada del espectro y se define ΔH ∈ [−1,0]. El E-Veto se implementa a nivel de nodo: solo se reportan eventos cuando LI y R son altos y ΔH es suficientemente negativa.",
+          "applicationCategory": "Scientific",
+          "operatingSystem": "Android / Web",
+          "dateCreated": "2025-09"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 7,
+        "item": {
+          "@type": "SoftwareApplication",
+          "name": "Nodo Sensor TCDS — 'Reloj Causal Humano — Shannon Entropy v1.5'",
+          "description": "Versión refinada del nodo, con interfaz oscura, dial de t_C, aguja de frecuencia pico, módulo de reglas Σ (LI, R, ΔH) y envío de telemetría a un endpoint /api/reports solo cuando se satisface el doble sello Σ-metrics + E-Veto.",
+          "applicationCategory": "Scientific",
+          "softwareVersion": "1.5",
+          "operatingSystem": "Android / Web",
+          "dateCreated": "2025-11-21",
+          "url": "https://reloj-causal-humano-tcds-s7o4.vercel.app/"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 8,
+        "item": {
+          "@type": "SoftwareApplication",
+          "name": "TCDS Master Node — Panel de Control Global v1.5 [Shannon/Arnold]",
+          "description": "Dashboard central que agrega eventos recientes (últimos 5 minutos) desde /api/reports, calcula promedios de ΔH, LI, R y Q, estima nivel de alerta backend (alert_level) y representa la evolución temporal de entropía vs locking. Incluye controles remotos vía /api/config para seleccionar modos (auto, científico, demo), ajustar intervalo de reporte y activar/desactivar alertas sonoras.",
+          "softwareVersion": "1.5",
+          "applicationCategory": [
+            "Scientific",
+            "Monitoring",
+            "Dashboard"
+          ],
+          "operatingSystem": "Web",
+          "url": "https://reloj-causal-humano-tcds.vercel.app/dashboard.html",
+          "dateCreated": "2025-11-22"
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 9,
+        "item": {
+          "@type": "CreativeWork",
+          "name": "Integración con Sistema Predictivo Sísmico TCDS",
+          "description": "Definición del objetivo actual: utilizar la red de Relojes Causales Humanos y el Master Node TCDS como front-end de un sistema predictivo sísmico, acoplado a catálogos públicos de sismos y datos GNSS/ionosféricos. Las Σ-metrics y ΔH sirven como filtros de coherencia para discriminar ruido de posibles precursores y réplicas, con registro auditable y JSON-LD como libro mayor.",
+          "dateCreated": "2025-11-23"
+        }
+      }
+    ]
+  },
+
+  "hasPart": [
+    {
+      "@type": "SoftwareSourceCode",
+      "name": "Nodo Sensor — index.html",
+      "programmingLanguage": "HTML, CSS, JavaScript",
+      "codeRepository": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS/blob/main/index.html",
+      "description": "Nodo sensor ejecutado en navegador móvil. Lee aceleración mediante DeviceMotion, calcula magnitud |a|, FFT en banda 0.2–7 Hz, entropía de Shannon normalizada, factor Q, LI y R proxy. Aplica E-Veto local y envía eventos resumidos a /api/reports.",
+      "keywords": [ "DeviceMotion", "Shannon Entropy", "Σ-metrics", "E-Veto", "t_C" ]
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "name": "Panel Global — dashboard.html",
+      "programmingLanguage": "HTML, CSS, JavaScript",
+      "codeRepository": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS/blob/main/dashboard.html",
+      "description": "Panel global (Master Node) que consulta periódicamente /api/reports, visualiza métricas agregadas (nodos activos, eventos recientes, ΔH, LI, R, Q) y muestra la serie temporal de ΔH vs LI. Expone controles remotos hacia /api/config.",
+      "keywords": [ "Dashboard", "Chart.js", "TCDS Master Node", "ΔH", "LI", "AlertLevel" ]
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "name": "Endpoint de Telemetría — /api/reports",
+      "programmingLanguage": "JavaScript",
+      "runtimePlatform": "Vercel Edge/Serverless",
+      "description": "Función serverless que recibe eventos de nodos (POST), los almacena en memoria como buffer circular y, ante peticiones GET, entrega métricas agregadas y un historial de ventanas recientes. Calcula active_nodes, medias de t_C, LI, R, ΔH, Q, y establece un alert_level usado por el Dashboard.",
+      "codeRepository": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS/blob/main/api/reports"
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "name": "Endpoint de Configuración — /api/config",
+      "programmingLanguage": "JavaScript",
+      "runtimePlatform": "Vercel Edge/Serverless",
+      "description": "Función serverless que almacena una configuración global (modo operativo, intervalo de reporte, activación de alertas sonoras). El Dashboard la escribe y los nodos pueden leerla para sincronizar su comportamiento, creando una capa de control causal sobre la red de sensores.",
+      "codeRepository": "https://github.com/geozunac3536-jpg/Reloj-Causal-Humano-TCDS/blob/main/api/config"
+    },
+    {
+      "@type": "Dataset",
+      "name": "Registros de Σ-metrics y ΔH — Reloj Causal Humano",
+      "description": "Colección de eventos Σ-metrics enviados por nodos humanos: cada registro incluye timestamp, identificador de dispositivo, geolocalización aproximada (cuando está disponible) y métricas derivadas (LI, R, ΔH, Q, |a|, t_C proxy). Usado para análisis retrospectivo y correlación con catálogos sísmicos públicos.",
+      "variableMeasured": [
+        "LI (Locking Index)",
+        "R (Kuramoto proxy)",
+        "ΔH (Entropía de Shannon normalizada)",
+        "Q (nitidez espectral)",
+        "|a| (magnitud de aceleración)",
+        "t_C (tiempo causal relativo)",
+        "alert_level (estado de la red)"
+      ]
+    }
+  ],
+
+  "potentialAction": [
+    {
+      "@type": "AssessAction",
+      "name": "Evaluar coherencia Σ y ΔH en ventanas móviles",
+      "description": "Aplicar Σ-metrics y E-Veto sobre ventanas de datos de aceleración y σ-métricas para etiquetar lapsos como φ-driven (ruido), borderline o Q-driven (coherencia potencialmente causal)."
+    },
+    {
+      "@type": "DiscoverAction",
+      "name": "Correlacionar lapsos Q-driven con eventos sísmicos",
+      "description": "Cruzar ventanas clasificadas como Q-driven por el Reloj Causal Humano y el Master Node con catálogos públicos de sismos (USGS, SSN, etc.) para evaluar poder predictivo, tasas de falsos positivos y estructura temporal de precursores."
+    }
+  ]
+}
