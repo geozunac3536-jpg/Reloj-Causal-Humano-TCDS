@@ -1,86 +1,70 @@
-// /api/config.js
-// Control remoto simple de nodos TCDS
-// Autor: Genaro Carrasco Ozuna
-
-import { applyCors } from "./utils/cors.js";
-
-// Estado global muy ligero
-let configState = {
-  mode_hint: "auto",           // auto | force_scientific | force_demo
-  report_interval_ms: 5000,    // sugerencia para nodos
-  alerts_enabled: true         // para futuras versiones con sonido
-};
-
-// Define esta variable en Vercel > Settings > Environment Variables
-const CONFIG_KEY = process.env.TCDS_CONFIG_KEY || "";
-
-// Helper
-function mergeConfig(partial) {
-  if (!partial || typeof partial !== "object") return;
-  if (partial.mode_hint && typeof partial.mode_hint === "string") {
-    configState.mode_hint = partial.mode_hint;
-  }
-  if (
-    typeof partial.report_interval_ms === "number" &&
-    partial.report_interval_ms >= 100 &&
-    partial.report_interval_ms <= 600000
-  ) {
-    configState.report_interval_ms = Math.floor(partial.report_interval_ms);
-  }
-  if (typeof partial.alerts_enabled === "boolean") {
-    configState.alerts_enabled = partial.alerts_enabled;
-  }
+// Configuración global en memoria (se reinicia cuando Vercel recicla la función)
+if (!globalThis.__TCDS_CONFIG__) {
+  globalThis.__TCDS_CONFIG__ = {
+    mode_hint: "auto",          // auto | force_scientific | force_demo
+    report_interval_ms: 5000,   // default para nodos
+    alerts_enabled: true
+  };
 }
 
+const ALLOWED_ORIGINS = [
+  "https://reloj-causal-humano-tcds.vercel.app",
+  "https://tcds-reloj-causal.vercel.app",
+  "https://geozunac3536-jpg.github.io"
+];
+
+// Clave mínima de control (visible en el frontend, sirve como "llave del tablero")
+const SERVER_KEY = process.env.TCDS_CONFIG_KEY || "TCDS_CONFIG_DEV_KEY";
+
 export default async function handler(req, res) {
-  applyCors(req, res);
+  const origin = req.headers.origin || "";
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
+  res.setHeader("Access-Control-Allow-Origin", allowOrigin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-TCDS-KEY");
+
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // ============ GET: lectura de config actual ============
+  const cfg = globalThis.__TCDS_CONFIG__;
+
+  // === GET: los nodos leen la configuración ===
   if (req.method === "GET") {
     return res.status(200).json({
-      ...configState,
-      // campo reservado para futuras extensiones
-      version: "1.0.0"
+      ...cfg,
+      server_time: Date.now()
     });
   }
 
-  // ============ POST: actualización (requiere llave) ============
+  // === POST: sólo el dashboard (con llave) puede modificar ===
   if (req.method === "POST") {
-    // Validar llave simple
-    if (!CONFIG_KEY) {
-      return res
-        .status(500)
-        .json({ error: "CONFIG_KEY no configurada en el servidor" });
-    }
-
     const key = req.headers["x-tcds-key"];
-    if (key !== CONFIG_KEY) {
+    if (!key || key !== SERVER_KEY) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     try {
-      const body =
-        typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
 
-      mergeConfig(body || {});
-
-      try {
-        console.log(
-          `[CONFIG] mode_hint=${configState.mode_hint} ` +
-          `interval=${configState.report_interval_ms}ms ` +
-          `alerts=${configState.alerts_enabled}`
-        );
-      } catch {
-        // ignorar errores de log
+      if (typeof body.mode_hint === "string") {
+        cfg.mode_hint = body.mode_hint;
+      }
+      if (typeof body.report_interval_ms === "number" && body.report_interval_ms >= 200) {
+        cfg.report_interval_ms = body.report_interval_ms;
+      }
+      if (typeof body.alerts_enabled === "boolean") {
+        cfg.alerts_enabled = body.alerts_enabled;
       }
 
-      return res.status(200).json({ ok: true, config: configState });
+      console.log("[CONFIG] Actualizada:", cfg);
+
+      return res.status(200).json({ ok: true, config: cfg });
     } catch (e) {
-      console.error("Error en POST /api/config:", e);
-      return res.status(500).json({ error: "Error interno" });
+      console.error("Error en /api/config POST:", e);
+      return res.status(500).json({ error: "Internal error" });
     }
   }
 
