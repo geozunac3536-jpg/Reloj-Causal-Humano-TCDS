@@ -16,7 +16,76 @@ Resumen (no sustituye al texto legal completo):
 Texto legal completo de la licencia CC BY-NC-SA 4.0:
 https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
-Para acuerdos comerciales o licencias TCDS-Σ-FET:
-- Contacto: Genaro Carrasco Ozuna
-- ORCID: https://orcid.org/0009-0005-6358-9910
-- Ko-fi: https://ko-fi.com/genarocarrasco
+# ⚠️ TCDS Causal Clock v1.5 - Industrial & Commercial Notice
+
+> **TECHNOLOGY READINESS LEVEL (TRL): 6**
+> *System Validated in Relevant Environment (Distributed Web/Mobile Network)*
+
+## 🛑 CONDICIONES DE USO Y LICENCIAMIENTO
+
+Este software está protegido bajo la licencia **CC BY-NC-SA 4.0** (Atribución - No Comercial - Compartir Igual).
+
+**LO QUE ESTO SIGNIFICA PARA USTED:**
+1.  **Uso Científico/Personal:** Gratuito. Puede auditar el código y desplegar nodos personales.
+2.  **Uso Comercial/Gubernamental:** ESTRICTAMENTE PROHIBIDO sin una Licencia Comercial Enterprise.
+    * Si usted representa a una **Aseguradora, Gobierno, Fondo de Inversión o Entidad Corporativa**, el uso de este código, su API o los datos generados (Data-Stream) para toma de decisiones, análisis de riesgo o lucro requiere un acuerdo de **Transferencia de Tecnología**.
+
+**🚫 AVISO A INVERSIONISTAS Y PARTNERS:**
+Este proyecto no acepta propuestas de desarrollo a cambio de equidad ("sweat equity") ni compras de IP por debajo de la valoración de mercado para activos TRL 6 con DOI registrado. El algoritmo de Filtrado Shannon/Arnold es propiedad intelectual cerrada para implementaciones comerciales.
+
+**CONTACTO PARA LICENCIA ENTERPRISE:**
+[geozunac3536@gmail.com]
+TCDS Causal Clock v1.5 — Dual Licensing Model
+Copyright (C) 2025 Genaro Carrasco Ozuna
+ORCID: 0009-0005-6358-9910
+DOI: 10.5281/zenodo.17677864
+
+------------------------------------------------------
+1) PUBLIC LICENSE — CC BY-NC-SA 4.0
+------------------------------------------------------
+You are free to:
+ - Share, copy, redistribute
+ - Adapt, remix, transform
+
+Under the following terms:
+ - Attribution required
+ - Non-Commercial only
+ - Share-Alike required
+ - No liability, no warranty
+
+Full license text:
+https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+------------------------------------------------------
+2) COMMERCIAL LICENSE — TCDS-Commercial Enterprise License
+------------------------------------------------------
+Any commercial, industrial, governmental or risk-analysis use
+REQUIRES a paid Enterprise Agreement, including but not limited to:
+
+ - Insurance companies
+ - Government, Civil Protection
+ - Risk scoring platforms
+ - Seismic monitoring centers
+ - Corporate AI integrations
+ - Hardware + sensor networks
+ - Data pipelines based on /api/reports
+
+Enterprise License grants:
+ - Production-grade parameters (Shannon/Arnold)
+ - Access to calibration constants
+ - Proprietary E-Veto Industrial
+ - Priority support
+ - Multi-node private dashboards
+ - Legal transfer-of-technology certificate
+
+Without an active Enterprise License, ALL commercial use is forbidden.
+
+Contact:
+Geozunac3536@gmail.com Tel/WA +52 8125989868
+
+------------------------------------------------------
+Legal Summary:
+- Public repo = Open for research.
+- Predictive engine + calibrations = Proprietary.
+- Any monetization, risk scoring or operational use = License required.
+
