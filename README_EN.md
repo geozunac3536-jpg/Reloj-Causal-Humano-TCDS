@@ -6,7 +6,7 @@ If you use the **TCDS Causal Human Clock** in scientific or technical work, plea
 
 > Carrasco Ozuna, G. (2025). *TCDS_Reloj_Causal_v1.5 — Reloj Causal Humano (Filtro Shannon/Arnold, Σ-metrics y Sincronización Q-Driven)* (Version v1) [Software]. Zenodo. https://doi.org/10.5281/zenodo.17677864
 # TCDS_Reloj_Causal_v1.5 — Human Causal Clock (Σ-Metrics, Shannon Entropy & Arnold Filter)
-**DOI:** https://doi.org/10.5281/zenodo.17677864  
+**DOI:** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg)](https://doi.org/10.5281/zenodo.17677864)
 **Author:** Genaro Carrasco Ozuna  
 **ORCID:** https://orcid.org/0009-0005-6358-9910  
 **Affiliation:** Proyecto TCDS — Motor Sincrónico de Luz (MSL), Mexico  
