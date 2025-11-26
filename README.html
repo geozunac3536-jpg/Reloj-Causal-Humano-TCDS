@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reloj Causal Humano — TCDS · Docs Interactivos ES/EN</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+/* ----------------------------- */
+/*     THEME — DARK MODERN       */
+/* ----------------------------- */
+
+:root {
+  --bg: #020510;
+  --bg-alt: #0b0f1b;
+  --bg-alt2: #11172a;
+  --fg: #e5e7f3;
+  --fg-muted: #9aa3c2;
+
+  --accent: #35e0ff;
+  --accent2: #ff6bff;
+  --accent-soft: rgba(53,224,255,0.14);
+
+  --border: rgba(255,255,255,0.08);
+  --radius: 14px;
+  --shadow: 0 12px 40px rgba(0,0,0,0.45);
+
+  --font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  background:
+    radial-gradient(circle at top, #151b3c 0, #020510 45%, #000000 100%);
+  color: var(--fg);
+  line-height: 1.6;
+}
+
+/* Wrapper */
+
+.wrapper {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 2.2rem 1.1rem 3.2rem;
+  position: relative;
+}
+
+/* Background glow / orbits */
+
+.bg-orbit {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  z-index: -1;
+}
+
+.bg-orbit::before,
+.bg-orbit::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  border: 1px dashed rgba(148,163,184,0.25);
+}
+
+.bg-orbit::before {
+  width: 480px;
+  height: 480px;
+  top: -140px;
+  right: 10%;
+}
+
+.bg-orbit::after {
+  width: 360px;
+  height: 360px;
+  bottom: -120px;
+  left: 5%;
+}
+
+/* Title block */
+
+.top-header {
+  margin-bottom: 1.8rem;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 3vw, 2.3rem);
+  margin: 0 0 0.4rem 0;
+  letter-spacing: 0.04em;
+}
+
+.subtitle-main {
+  font-size: 0.92rem;
+  color: var(--fg-muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--fg-muted);
+  margin-bottom: 0.6rem;
+}
+
+.chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--accent) 0, #22c55e 55%, transparent 100%);
+}
+
+/* Tabs */
+
+.tab-buttons {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(15,23,42,0.85);
+  margin-top: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.tab-buttons button {
+  background: transparent;
+  color: var(--fg-muted);
+  border: none;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.86rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.16s ease-out;
+}
+
+.tab-buttons button.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #020617;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.tab-buttons button:hover {
+  filter: brightness(1.08);
+}
+
+.tab-content {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.tab-content.active {
+  display: block;
+  opacity: 1;
+}
+
+/* Sections, cards */
+
+h2 {
+  margin-top: 1.8rem;
+  font-size: 1.3rem;
+  color: var(--accent);
+}
+
+h3 {
+  margin-top: 1.3rem;
+  font-size: 1.02rem;
+  color: var(--fg-muted);
+}
+
+p {
+  font-size: 0.94rem;
+}
+
+ul {
+  padding-left: 1.1rem;
+}
+
+.card {
+  background: radial-gradient(circle at top left, rgba(56,189,248,0.07), var(--bg-alt));
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 1.1rem 1.3rem;
+  box-shadow: var(--shadow);
+  margin: 1.1rem 0;
+}
+
+.card-soft {
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 0.95rem 1.15rem;
+  margin: 0.8rem 0;
+}
+
+/* Links & inline code */
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.83rem;
+  background: #151a2c;
+  padding: 0.16rem 0.3rem;
+  border-radius: 6px;
+  color: var(--accent);
+}
+
+/* Table */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.7rem 0 1rem;
+  font-size: 0.86rem;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.65rem;
+}
+
+th {
+  text-align: left;
+  background: rgba(15,23,42,0.9);
+}
+
+/* Interactive panel layout */
+
+.interactive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 1.2rem;
+  margin-top: 1.4rem;
+}
+
+@media (max-width: 900px) {
+  .interactive-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* KPI Simulator */
+
+.sim-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.badge {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.kpi-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.kpi-label-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
+.kpi-label-line span.value {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.sim-status {
+  margin-top: 0.8rem;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.86rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sim-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+/* status colors */
+.sim-status.phi {
+  background: rgba(248,113,113,0.12);
+  border: 1px solid rgba(248,113,113,0.5);
+}
+
+.sim-status.borderline {
+  background: rgba(250,204,21,0.12);
+  border: 1px solid rgba(250,204,21,0.55);
+}
+
+.sim-status.q {
+  background: rgba(52,211,153,0.12);
+  border: 1px solid rgba(52,211,153,0.7);
+}
+
+.sim-dot.phi {
+  background: radial-gradient(circle, #f87171 0, transparent 80%);
+}
+
+.sim-dot.borderline {
+  background: radial-gradient(circle, #eab308 0, transparent 80%);
+}
+
+.sim-dot.q {
+  background: radial-gradient(circle, #34d399 0, transparent 80%);
+}
+
+/* Causal Clock Mini */
+
+.clock-mini {
+  border-radius: 999px;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 0.9rem;
+  background:
+    radial-gradient(circle at top, rgba(250,250,255,0.08), transparent 60%),
+    conic-gradient(from 210deg, rgba(53,224,255,0.1), rgba(255,107,255,0.6), rgba(53,224,255,0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clock-inner {
+  width: 78%;
+  height: 78%;
+  border-radius: inherit;
+  border: 1px solid rgba(148,163,184,0.5);
+  box-shadow: inset 0 0 35px rgba(0,0,0,0.85);
+  background: radial-gradient(circle at center, #020617 0, #020617 65%, #02040a 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.clock-label {
+  font-size: 0.73rem;
+  color: var(--fg-muted);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.clock-tc {
+  font-size: 1.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-mode {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+}
+
+/* Node counter */
+
+.node-counter {
+  text-align: center;
+  margin-top: 0.4rem;
+}
+
+.node-label {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
+.node-value {
+  font-size: 1.1rem;
+  font-family: var(--font-mono);
+}
+
+/* Footer */
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+</style>
+</head>
+
+<body>
+<div class="bg-orbit"></div>
+
+<div class="wrapper">
+  <div class="top-header">
+    <div class="chip">
+      <span class="chip-dot"></span>
+      Reloj Causal Humano · Human Causal Clock — TCDS v1.5
+    </div>
+    <h1>Σ-metrics · ΔH · t<sub>C</sub> · E-Veto</h1>
+    <p class="subtitle-main">
+      Nodo distribuido de coherencia TCDS para ciencia ciudadana y falsación del paradigma Q–Σ–φ–χ.
+    </p>
+    <div class="tab-buttons" id="langTabs">
+      <button data-lang="es" class="active">🇪🇸 Español</button>
+      <button data-lang="en">🇺🇸 English</button>
+    </div>
+  </div>
+
+  <!-- TAB: ESPAÑOL -->
+  <div id="tab-es" class="tab-content active">
+    <h2>🌌 ¿Qué es el Reloj Causal Humano?</h2>
+    <p>
+      El <strong>Reloj Causal Humano — TCDS</strong> es un nodo experimental distribuido que mide en tiempo real:
+    </p>
+    <ul>
+      <li><strong>Coherencia Σ</strong> (LI, R, RMSE_SL)</li>
+      <li><strong>Entropía de Shannon normalizada (ΔH)</strong></li>
+      <li><strong>Tiempo Causal t<sub>C</sub></strong> (gradiente de coherencia dΣ/dt)</li>
+      <li><strong>Clasificación Q-driven vs φ-driven</strong> mediante el <strong>Filtro de Honestidad (E-Veto)</strong></li>
+    </ul>
+
+    <div class="card">
+      <strong>Canon TCDS — condición de coherencia válida:</strong><br><br>
+      <code>LI ≥ 0.90</code> ·
+      <code>R &gt; 0.95</code> ·
+      <code>RMSE_SL &lt; 0.10</code> ·
+      <code>ΔH ≤ −0.20</code><br><br>
+      Si esta condición no se cumple de forma simultánea, la señal se considera
+      <strong>φ-driven (ruido)</strong> aunque muestre locking aparente.
+    </div>
+
+    <h2>🌍 Únete a la Red Global de Coherencia TCDS</h2>
+    <p>
+      El Reloj está diseñado para convertir lectores en <strong>Nodos Activos</strong> dentro de una red distribuida
+      de ciencia ciudadana. Tu dispositivo se vuelve un sensor de ΔH y Σ-locking al servicio de la falsación TCDS.
+    </p>
+
+    <div class="card-soft">
+      <strong>Pasos para activar tu nodo:</strong><br><br>
+      1. Abre el sensor en tu móvil:<br>
+      👉 <a href="https://reloj-causal-humano-tcds.vercel.app/" target="_blank">https://reloj-causal-humano-tcds.vercel.app/</a><br><br>
+      2. Toca <em>“ACTIVAR NODO”</em> y permite el uso del acelerómetro.<br><br>
+      3. Deja la pestaña abierta, idealmente con el teléfono cargando sobre una superficie firme (modo vigilia nocturna).<br><br>
+      4. Observa el estado global desde el Dashboard Maestro:<br>
+      👉 <a href="https://reloj-causal-humano-tcds.vercel.app/dashboard.html" target="_blank">Dashboard global</a>
+    </div>
+
+    <h2>🧪 Simulador interactivo Σ-metrics + E-Veto</h2>
+    <p>
+      Ajusta las métricas y observa cómo cambia el veredicto del Reloj. El simulador no afecta datos reales,
+      pero refleja la lógica del Filtro de Honestidad.
+    </p>
+
+    <div class="interactive-grid">
+      <!-- Panel izquierdo: sliders -->
+      <div class="card">
+        <div class="sim-header">
+          <div>
+            <strong>Simulador de coherencia Σ</strong><br>
+            <span style="font-size:0.8rem;color:var(--fg-muted);">
+              Mueve los controles para ver si la ventana es φ-driven, borderline o Q-driven.
+            </span>
+          </div>
+          <span class="badge">E-Veto Engine</span>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>LI (Locking Index)</span>
+              <span class="value" id="es-li-val">0.90</span>
+            </div>
+            <input id="es-li" type="range" min="0.0" max="1.0" step="0.01" value="0.90">
+          </div>
+
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>R (correlación)</span>
+              <span class="value" id="es-r-val">0.95</span>
+            </div>
+            <input id="es-r" type="range" min="0.0" max="1.0" step="0.01" value="0.95">
+          </div>
+
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>RMSE_SL</span>
+              <span class="value" id="es-rmse-val">0.10</span>
+            </div>
+            <input id="es-rmse" type="range" min="0.0" max="0.5" step="0.01" value="0.10">
+          </div>
+
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>ΔH (cambio de entropía)</span>
+              <span class="value" id="es-dh-val">-0.20</span>
+            </div>
+            <input id="es-dh" type="range" min="-0.5" max="0.2" step="0.01" value="-0.20">
+          </div>
+        </div>
+
+        <div id="es-status" class="sim-status">
+          <div id="es-status-dot" class="sim-dot"></div>
+          <div id="es-status-text"></div>
+        </div>
+      </div>
+
+      <!-- Panel derecho: reloj y nodos -->
+      <div class="card">
+        <div class="sim-header">
+          <div>
+            <strong>Reloj Causal (demo)</strong><br>
+            <span style="font-size:0.8rem;color:var(--fg-muted);">
+              t<sub>C</sub> pseudo-causal y conteo simbólico de nodos de la red.
+            </span>
+          </div>
+          <span class="badge">Demo local</span>
+        </div>
+
+        <div class="clock-mini">
+          <div class="clock-inner">
+            <div class="clock-label">t<sub>C</sub> (segundos causales)</div>
+            <div id="es-tc" class="clock-tc">+0.000</div>
+            <div class="clock-mode" id="es-tc-mode">Baseline φ-driven</div>
+          </div>
+        </div>
+
+        <div class="node-counter">
+          <div class="node-label">Nodos activos simulados (demo)</div>
+          <div class="node-value" id="es-nodes">128</div>
+        </div>
+      </div>
+    </div>
+
+    <h2>🛡️ Privacidad y ciencia abierta</h2>
+    <ul>
+      <li>No se accede a cámara, micrófono ni archivos.</li>
+      <li>Solo se utiliza el acelerómetro del dispositivo.</li>
+      <li>No se almacenan datos personales ni identificadores únicos.</li>
+      <li>Los datos se tratan como contribución anónima y auditable para investigación en riesgos naturales y coherencia de sistemas.</li>
+    </ul>
+
+    <h2>📚 Ecosistema TCDS</h2>
+    <ul>
+      <li>Sitio principal: <a href="https://geozunac3536-jpg.github.io" target="_blank">https://geozunac3536-jpg.github.io</a></li>
+      <li>Índice de DOIs (Libro Mayor): <a href="https://geozunac3536-jpg.github.io/Indice-de-DOI" target="_blank">Indice-de-DOI</a></li>
+      <li>Sistema Predictivo TCDS: <a href="https://geozunac3536-jpg.github.io/TCDS-SISTEMA-PREDICTIVO/" target="_blank">TCDS-SISTEMA-PREDICTIVO</a></li>
+      <li>Gradiente Económico TCDS: <a href="https://geozunac3536-jpg.github.io/TCDS_Gradiente_Economico/" target="_blank">TCDS_Gradiente_Economico</a></li>
+    </ul>
+
+    <h2>🤝 Apoyo, autoría y cita</h2>
+    <p>Ko-fi: <a href="https://ko-fi.com/genarocarrasco" target="_blank">https://ko-fi.com/genarocarrasco</a></p>
+    <p>
+      Autor: <strong>Genaro Carrasco Ozuna</strong><br>
+      Email: <a href="mailto:geozunac3536@gmail.com">geozunac3536@gmail.com</a><br>
+      ORCID: <a href="https://orcid.org/0009-0005-6358-9910" target="_blank">0009-0005-6358-9910</a><br>
+      Web: <a href="https://geozunac3536-jpg.github.io" target="_blank">geozunac3536-jpg.github.io</a>
+    </p>
+    <p style="font-size:0.9rem;">
+      Cita sugerida:<br>
+      Carrasco Ozuna, G. (2025). <em>TCDS_Reloj_Causal_v1.5 — Reloj Causal Humano (Σ-metrics, ΔH, Arnold Filter &amp; t<sub>C</sub> Engine)</em>.
+      Zenodo. <a href="https://doi.org/10.5281/zenodo.17677864" target="_blank">https://doi.org/10.5281/zenodo.17677864</a>
+    </p>
+  </div>
+
+  <!-- TAB: ENGLISH -->
+  <div id="tab-en" class="tab-content">
+    <h2>🌌 What is the Human Causal Clock?</h2>
+    <p>
+      The <strong>Human Causal Clock — TCDS</strong> is a distributed experimental node that measures in real time:
+    </p>
+    <ul>
+      <li><strong>Σ-coherence metrics</strong> (LI, R, RMSE_SL)</li>
+      <li><strong>Normalized Shannon Entropy (ΔH)</strong></li>
+      <li><strong>Causal Time t<sub>C</sub></strong> (coherence gradient dΣ/dt)</li>
+      <li><strong>Q-driven vs φ-driven</strong> classification through the <strong>Honesty Filter (E-Veto)</strong></li>
+    </ul>
+
+    <div class="card">
+      <strong>TCDS Canon — valid coherence condition:</strong><br><br>
+      <code>LI ≥ 0.90</code> ·
+      <code>R &gt; 0.95</code> ·
+      <code>RMSE_SL &lt; 0.10</code> ·
+      <code>ΔH ≤ −0.20</code><br><br>
+      If those requirements are not met simultaneously, the signal is considered
+      <strong>φ-driven (noise)</strong> even if it exhibits apparent locking.
+    </div>
+
+    <h2>🌍 Join the TCDS Global Coherence Network</h2>
+    <p>
+      The Clock is designed to turn readers into <strong>Active Nodes</strong> inside a distributed
+      citizen-science network. Your device becomes a ΔH &amp; Σ-locking sensor to stress-test TCDS.
+    </p>
+
+    <div class="card-soft">
+      <strong>Steps to activate your node:</strong><br><br>
+      1. Open the sensor on your phone:<br>
+      👉 <a href="https://reloj-causal-humano-tcds.vercel.app/" target="_blank">https://reloj-causal-humano-tcds.vercel.app/</a><br><br>
+      2. Tap <em>“ACTIVATE NODE”</em> and allow motion sensor access.<br><br>
+      3. Keep the tab open — ideally overnight, charging, on a stable surface.<br><br>
+      4. Watch the global state in the Master Dashboard:<br>
+      👉 <a href="https://reloj-causal-humano-tcds.vercel.app/dashboard.html" target="_blank">Global dashboard</a>
+    </div>
+
+    <h2>🧪 Interactive Σ-metrics + E-Veto Simulator</h2>
+    <p>
+      Tune the metrics and observe how the Clock's verdict changes. The simulator does not alter real data,
+      but it reflects the underlying Honesty Filter logic.
+    </p>
+
+    <div class="interactive-grid">
+      <!-- Left: sliders -->
+      <div class="card">
+        <div class="sim-header">
+          <div>
+            <strong>Σ-coherence simulator</strong><br>
+            <span style="font-size:0.8rem;color:var(--fg-muted);">
+              Move the sliders to see whether the window is φ-driven, borderline, or Q-driven.
+            </span>
+          </div>
+          <span class="badge">E-Veto Engine</span>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>LI (Locking Index)</span>
+              <span class="value" id="en-li-val">0.90</span>
+            </div>
+            <input id="en-li" type="range" min="0.0" max="1.0" step="0.01" value="0.90">
+          </div>
+
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>R (correlation)</span>
+              <span class="value" id="en-r-val">0.95</span>
+            </div>
+            <input id="en-r" type="range" min="0.0" max="1.0" step="0.01" value="0.95">
+          </div>
+
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>RMSE_SL</span>
+              <span class="value" id="en-rmse-val">0.10</span>
+            </div>
+            <input id="en-rmse" type="range" min="0.0" max="0.5" step="0.01" value="0.10">
+          </div>
+
+          <div class="kpi-item">
+            <div class="kpi-label-line">
+              <span>ΔH (entropy change)</span>
+              <span class="value" id="en-dh-val">-0.20</span>
+            </div>
+            <input id="en-dh" type="range" min="-0.5" max="0.2" step="0.01" value="-0.20">
+          </div>
+        </div>
+
+        <div id="en-status" class="sim-status">
+          <div id="en-status-dot" class="sim-dot"></div>
+          <div id="en-status-text"></div>
+        </div>
+      </div>
+
+      <!-- Right: clock + nodes -->
+      <div class="card">
+        <div class="sim-header">
+          <div>
+            <strong>Causal Clock (demo)</strong><br>
+            <span style="font-size:0.8rem;color:var(--fg-muted);">
+              Pseudo-causal t<sub>C</sub> and a symbolic network node count.
+            </span>
+          </div>
+          <span class="badge">Local demo</span>
+        </div>
+
+        <div class="clock-mini">
+          <div class="clock-inner">
+            <div class="clock-label">t<sub>C</sub> (causal seconds)</div>
+            <div id="en-tc" class="clock-tc">+0.000</div>
+            <div class="clock-mode" id="en-tc-mode">Baseline φ-driven</div>
+          </div>
+        </div>
+
+        <div class="node-counter">
+          <div class="node-label">Simulated active nodes (demo)</div>
+          <div class="node-value" id="en-nodes">128</div>
+        </div>
+      </div>
+    </div>
+
+    <h2>🛡️ Privacy & Open Science</h2>
+    <ul>
+      <li>No camera, no microphone, no file system access.</li>
+      <li>Only the accelerometer is used.</li>
+      <li>No personal data or unique IDs are stored.</li>
+      <li>All contributions are treated as anonymous, auditable data aimed at natural-risk and coherence research.</li>
+    </ul>
+
+    <h2>📚 TCDS Ecosystem</h2>
+    <ul>
+      <li>Main site: <a href="https://geozunac3536-jpg.github.io" target="_blank">https://geozunac3536-jpg.github.io</a></li>
+      <li>DOI Index (Master Ledger): <a href="https://geozunac3536-jpg.github.io/Indice-de-DOI" target="_blank">Indice-de-DOI</a></li>
+      <li>TCDS Predictive System: <a href="https://geozunac3536-jpg.github.io/TCDS-SISTEMA-PREDICTIVO/" target="_blank">TCDS-SISTEMA-PREDICTIVO</a></li>
+      <li>TCDS Economic Gradient: <a href="https://geozunac3536-jpg.github.io/TCDS_Gradiente_Economico/" target="_blank">TCDS_Gradiente_Economico</a></li>
+    </ul>
+
+    <h2>🤝 Support, authorship & citation</h2>
+    <p>Ko-fi: <a href="https://ko-fi.com/genarocarrasco" target="_blank">https://ko-fi.com/genarocarrasco</a></p>
+    <p>
+      Author: <strong>Genaro Carrasco Ozuna</strong><br>
+      Email: <a href="mailto:geozunac3536@gmail.com">geozunac3536@gmail.com</a><br>
+      ORCID: <a href="https://orcid.org/0009-0005-6358-9910" target="_blank">0009-0005-6358-9910</a><br>
+      Website: <a href="https://geozunac3536-jpg.github.io" target="_blank">geozunac3536-jpg.github.io</a>
+    </p>
+    <p style="font-size:0.9rem;">
+      Suggested citation:<br>
+      Carrasco Ozuna, G. (2025). <em>TCDS_Reloj_Causal_v1.5 — Human Causal Clock (Σ-metrics, ΔH, Arnold Filter &amp; t<sub>C</sub> Engine)</em>.
+      Zenodo. <a href="https://doi.org/10.5281/zenodo.17677864" target="_blank">https://doi.org/10.5281/zenodo.17677864</a>
+    </p>
+  </div>
+
+  <footer>
+    © 2025 · Teoría Cromodinámica Sincrónica (TCDS) · Reloj Causal Humano (v1.5) — CC BY-NC-SA 4.0 + TCDS-Σ Commercial Layer.
+  </footer>
+</div>
+
+<script>
+// ---- Language tabs ----
+const tabButtons = document.querySelectorAll('#langTabs button');
+const tabContents = {
+  es: document.getElementById('tab-es'),
+  en: document.getElementById('tab-en')
+};
+
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const lang = btn.getAttribute('data-lang');
+    tabButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.keys(tabContents).forEach(k => {
+      tabContents[k].classList.toggle('active', k === lang);
+    });
+  });
+});
+
+// ---- Σ-metrics simulator logic ----
+function clamp(num, min, max) {
+  return Math.min(max, Math.max(min, num));
+}
+
+function updateSim(prefix, lang) {
+  const li = parseFloat(document.getElementById(prefix + '-li').value);
+  const r = parseFloat(document.getElementById(prefix + '-r').value);
+  const rmse = parseFloat(document.getElementById(prefix + '-rmse').value);
+  const dh = parseFloat(document.getElementById(prefix + '-dh').value);
+
+  document.getElementById(prefix + '-li-val').textContent = li.toFixed(2);
+  document.getElementById(prefix + '-r-val').textContent = r.toFixed(2);
+  document.getElementById(prefix + '-rmse-val').textContent = rmse.toFixed(2);
+  document.getElementById(prefix + '-dh-val').textContent = dh.toFixed(2);
+
+  const statusBox = document.getElementById(prefix + '-status');
+  const dot = document.getElementById(prefix + '-status-dot');
+  const text = document.getElementById(prefix + '-status-text');
+
+  const kpiOk = (li >= 0.9) && (r > 0.95) && (rmse < 0.10);
+  const entropyOk = (dh <= -0.20);
+
+  let mode;
+  if (!kpiOk && !entropyOk) {
+    mode = 'phi';
+  } else if (kpiOk && entropyOk) {
+    mode = 'q';
+  } else {
+    mode = 'borderline';
+  }
+
+  statusBox.classList.remove('phi', 'q', 'borderline');
+  dot.classList.remove('phi', 'q', 'borderline');
+  statusBox.classList.add(mode);
+  dot.classList.add(mode);
+
+  if (lang === 'es') {
+    if (mode === 'phi') {
+      text.textContent = 'Ventana φ-driven: ruido / coherencia no válida según el canon Σ-metrics + ΔH.';
+    } else if (mode === 'borderline') {
+      text.textContent = 'Zona borderline: algunos KPIs cumplen, pero el E-Veto no está satisfecho del todo.';
+    } else {
+      text.textContent = 'Candidata Q-driven: locking + caída de entropía coherentes con las métricas canónicas.';
+    }
+  } else {
+    if (mode === 'phi') {
+      text.textContent = 'φ-driven window: noise / invalid coherence under Σ-metrics + ΔH canon.';
+    } else if (mode === 'borderline') {
+      text.textContent = 'Borderline zone: some KPIs pass, but the Honesty Filter (E-Veto) is not fully satisfied.';
+    } else {
+      text.textContent = 'Q-driven candidate: locking + entropy drop consistent with canonical Σ-metrics.';
+    }
+  }
+}
+
+// attach listeners
+['es', 'en'].forEach(prefix => {
+  ['li', 'r', 'rmse', 'dh'].forEach(field => {
+    const el = document.getElementById(`${prefix}-${field}`);
+    const lang = prefix === 'es' ? 'es' : 'en';
+    el.addEventListener('input', () => updateSim(prefix, lang));
+  });
+  const lang = prefix === 'es' ? 'es' : 'en';
+  updateSim(prefix, lang);
+});
+
+// ---- Causal time + nodes demo ----
+let t = 0;
+let nodesES = 128;
+let nodesEN = 128;
+
+function animate() {
+  t += 0.03;
+
+  // small pseudo-causal fluctuations
+  const tcES = 0.02 * Math.sin(t / 1.7) + 0.004 * (Math.random() - 0.5);
+  const tcEN = 0.02 * Math.cos(t / 1.5) + 0.004 * (Math.random() - 0.5);
+
+  const esTCel = document.getElementById('es-tc');
+  const enTCel = document.getElementById('en-tc');
+  esTCel.textContent = (tcES >= 0 ? '+' : '') + tcES.toFixed(3);
+  enTCel.textContent = (tcEN >= 0 ? '+' : '') + tcEN.toFixed(3);
+
+  const esModeEl = document.getElementById('es-tc-mode');
+  const enModeEl = document.getElementById('en-tc-mode');
+
+  const updateModeText = (val, lang, el) => {
+    const abs = Math.abs(val);
+    if (lang === 'es') {
+      if (abs < 0.02) el.textContent = 'Baseline φ-driven';
+      else if (abs < 0.06) el.textContent = 'Zona borderline';
+      else el.textContent = 'Región candidata Q-driven';
+    } else {
+      if (abs < 0.02) el.textContent = 'Baseline φ-driven';
+      else if (abs < 0.06) el.textContent = 'Borderline zone';
+      else el.textContent = 'Q-driven candidate region';
+    }
+  };
+
+  updateModeText(tcES, 'es', esModeEl);
+  updateModeText(tcEN, 'en', enModeEl);
+
+  // node count gentle breathing
+  const driftES = Math.sin(t / 4) * 0.6;
+  const driftEN = Math.cos(t / 4.5) * 0.6;
+  nodesES = clamp(nodesES + driftES, 80, 420);
+  nodesEN = clamp(nodesEN + driftEN, 80, 420);
+  document.getElementById('es-nodes').textContent = Math.round(nodesES);
+  document.getElementById('en-nodes').textContent = Math.round(nodesEN);
+
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script>
+
+</body>
+  </html>
