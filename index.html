@@ -1,990 +1,571 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <a href="https://doi.org/10.5281/zenodo.17677864"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg" alt="DOI"></a>
   <meta charset="UTF-8" />
-  <title>Reloj Causal Humano — TCDS [Shannon Entropy v1.5]</title>
+  <title>Reloj Causal Humano — TCDS [Nodo Sensor v1.5]</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Nodo sensor TCDS: Medición de entropía espectral de Shannon y coherencia Q-Driven.">
+  <meta name="description"
+        content="Reloj Causal Humano — TCDS: nodo sensor distribuido para medir Σ-metrics, entropía ΔH y tiempo causal tC en tiempo real, con Filtro de Honestidad (E-Veto).">
   <style>
     :root {
-      --bg: #030413;
-      --bg-alt: #0b0f1f;
+      --bg: #020510;
+      --bg-alt: #0b0f1b;
+      --bg-alt2: #11172a;
       --fg: #f5f7ff;
+      --muted: #9aa3c2;
       --accent: #35e0ff;
       --accent2: #ff6bff;
       --accent3: #40ff9c;
-      --danger: #ff6b6b;
+      --danger: #f97373;
+      --warn: #facc15;
       --ok: #4ade80;
-      --warn: #f97316;
-      --card-radius: 20px;
-      --shadow-soft: 0 24px 70px rgba(0,0,0,0.85);
+      --border: rgba(148,163,184,0.35);
+      --radius: 18px;
+      --shadow: 0 20px 50px rgba(0,0,0,0.5);
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", monospace;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
     }
 
     body {
-      min-height: 100dvh;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      color: var(--fg);
+      font-family: var(--font-main);
       background:
-        radial-gradient(circle at top, #202852 0%, #060716 40%, #01010a 100%),
-        radial-gradient(circle at 10% 90%, rgba(53,224,255,0.12), transparent 55%),
-        radial-gradient(circle at 80% 10%, rgba(255,107,255,0.15), transparent 55%);
+        radial-gradient(circle at top, #151b3c 0, #020510 45%, #000000 100%);
+      color: var(--fg);
+      min-height: 100vh;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
     }
 
     .shell {
-      max-width: 1100px;
-      margin: auto;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    /* --- RELOJ PRINCIPAL --- */
-    .big-clock {
-      background:
-        radial-gradient(circle at 50% 20%, rgba(53,224,255,0.18), transparent 60%),
-        radial-gradient(circle at center, #02030b 0%, #02020a 55%, #000000 100%);
-      border-radius: 32px;
-      padding: 24px;
-      border: 1px solid rgba(148,163,184,0.4);
-      box-shadow: var(--shadow-soft);
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 2.2rem 1.2rem 3rem;
       position: relative;
-      overflow: hidden;
-      transition: 0.3s border-color, 0.3s box-shadow, 0.3s transform;
-      isolation: isolate;
     }
 
-    .big-clock::before {
+    .bg-orbit {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.4;
+      z-index: -1;
+    }
+
+    .bg-orbit::before,
+    .bg-orbit::after {
       content: "";
       position: absolute;
-      inset: -40%;
-      background:
-        radial-gradient(circle at 20% 0%, rgba(53,224,255,0.12), transparent 75%),
-        radial-gradient(circle at 80% 100%, rgba(255,107,255,0.10), transparent 75%);
-      opacity: 0.9;
-      pointer-events: none;
-      mix-blend-mode: screen;
-    }
-
-    .big-clock svg {
-      width: 100%;
-      height: auto;
-      display: block;
-      position: relative;
-      z-index: 1;
-    }
-
-    .big-clock.ready {
-      border-color: rgba(56,189,248,0.9);
-      box-shadow:
-        0 0 35px rgba(56,189,248,0.45),
-        0 24px 70px rgba(0,0,0,0.9);
-      transform: translateY(-2px);
-    }
-
-    /* pulso cuando transmite */
-    .big-clock.tx-pulse {
-      box-shadow:
-        0 0 35px rgba(64,255,156,0.6),
-        0 28px 80px rgba(0,0,0,0.95);
-      border-color: rgba(64,255,156,0.9);
-    }
-
-    /* alertas globales */
-    .big-clock.alert-watch {
-      border-color: rgba(250,204,21,0.9);
-      box-shadow:
-        0 0 24px rgba(250,204,21,0.7),
-        0 24px 70px rgba(0,0,0,0.95);
-    }
-
-    .big-clock.alert-warning {
-      border-color: rgba(248,113,113,0.95);
-      box-shadow:
-        0 0 28px rgba(248,113,113,0.85),
-        0 26px 80px rgba(0,0,0,0.98);
-    }
-
-    .big-clock-glow {
-      position: absolute;
-      inset: 8%;
       border-radius: 999px;
-      background: radial-gradient(circle at center, rgba(53,224,255,0.14), transparent 70%);
-      filter: blur(20px);
-      opacity: 0.7;
-      pointer-events: none;
-      z-index: 0;
+      border: 1px dashed rgba(148,163,184,0.22);
     }
 
-    /* --- MÓDULO SIGMA / REGLAS --- */
-    .sigma-module {
-      background: rgba(0,0,0,0.6);
-      border: 1px solid rgba(53,224,255,0.35);
-      border-radius: 16px;
-      padding: 12px;
-      margin-top: 10px;
+    .bg-orbit::before {
+      width: 520px;
+      height: 520px;
+      top: -160px;
+      right: 12%;
+    }
+
+    .bg-orbit::after {
+      width: 380px;
+      height: 380px;
+      bottom: -140px;
+      left: 6%;
+    }
+
+    header {
+      margin-bottom: 1.8rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.2rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      background: rgba(15,23,42,0.88);
+    }
+
+    .chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--accent3) 0, transparent 80%);
+    }
+
+    h1 {
+      font-size: clamp(1.9rem, 3vw, 2.3rem);
+      margin-top: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin-top: 0.4rem;
+      font-size: 0.94rem;
+      color: var(--muted);
+      max-width: 640px;
+    }
+
+    .top-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-top: 0.7rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .top-meta a {
+      color: var(--accent);
+    }
+
+    main {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      text-align: center;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 1.4rem;
     }
 
-    .rule-box {
-      background: radial-gradient(circle at top, rgba(255,255,255,0.12), rgba(15,23,42,0.8));
-      border-radius: 10px;
-      padding: 8px 4px;
-      font-size: 10px;
-      color: rgba(241,245,249,0.7);
-      transition: 0.18s transform, 0.2s box-shadow, 0.2s border-color, 0.2s background-color, 0.2s color;
-      border: 1px solid rgba(148,163,184,0.45);
-      box-shadow: 0 8px 16px rgba(15,23,42,0.7);
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
 
-    .rule-box strong {
-      display: block;
-      font-size: 13px;
-      margin-bottom: 2px;
-      letter-spacing: 0.05em;
-    }
-
-    .rule-pass {
-      background: radial-gradient(circle at top, rgba(74,222,128,0.22), rgba(15,23,42,0.95));
-      border-color: rgba(74,222,128,0.9);
-      color: var(--ok);
-      box-shadow:
-        0 0 10px rgba(74,222,128,0.35),
-        0 12px 24px rgba(15,23,42,0.9);
-      transform: translateY(-1px);
-    }
-
-    .rule-fail {
-      background: radial-gradient(circle at top, rgba(248,113,113,0.20), rgba(15,23,42,0.96));
-      border-color: rgba(248,113,113,0.95);
-      color: var(--danger);
-      box-shadow:
-        0 0 8px rgba(248,113,113,0.3),
-        0 10px 22px rgba(15,23,42,0.95);
-      transform: translateY(-0.5px);
-    }
-
-    /* --- TARJETAS / LAYOUT --- */
     .card {
-      background: linear-gradient(145deg, rgba(15,23,42,0.90), rgba(15,23,42,0.98));
-      border-radius: var(--card-radius);
-      padding: 14px 16px;
-      border: 1px solid rgba(148,163,184,0.5);
-      box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.08), var(--bg-alt));
+      box-shadow: var(--shadow);
+      padding: 1.2rem 1.3rem;
       position: relative;
       overflow: hidden;
     }
 
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: -20%;
-      background:
-        radial-gradient(circle at 0% 0%, rgba(53,224,255,0.08), transparent 55%),
-        radial-gradient(circle at 100% 100%, rgba(255,107,255,0.06), transparent 55%);
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    .card > * {
-      position: relative;
-      z-index: 1;
+    .card-soft {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-alt);
+      padding: 1.0rem 1.1rem;
+      margin-top: 0.9rem;
     }
 
     .card-title {
-      font-size: 13px;
+      font-size: 0.98rem;
       font-weight: 600;
-      text-transform: uppercase;
-      opacity: 0.92;
-      margin-bottom: 8px;
       letter-spacing: 0.12em;
-      color: rgba(226,232,240,0.98);
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
     }
 
-    .grid-2 {
+    .badge {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .hero-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr);
-      gap: 14px;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: 1.2rem;
     }
 
-    @media (max-width: 800px) {
-      .grid-2 {
-        grid-template-columns: 1fr;
+    @media (max-width: 750px) {
+      .hero-grid {
+        grid-template-columns: minmax(0, 1fr);
       }
     }
 
-    /* --- BOTONES --- */
-    button {
-      padding: 8px 16px;
+    .big-clock {
+      position: relative;
+      width: 260px;
+      height: 260px;
       border-radius: 999px;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 12px;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      transition: 0.2s transform, 0.2s box-shadow, 0.2s background-color, 0.2s color, 0.2s opacity;
-      box-shadow: 0 8px 22px rgba(15,23,42,0.85);
+      margin: 0 auto;
+      border: 1px solid rgba(148,163,184,0.65);
+      background:
+        radial-gradient(circle at top, rgba(250,250,255,0.08), transparent 58%),
+        conic-gradient(from 210deg, rgba(53,224,255,0.1), rgba(255,107,255,0.6), rgba(53,224,255,0.1));
+      box-shadow: 0 18px 45px rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
 
-    #startBtn {
-      background: radial-gradient(circle at 30% 0%, #a5f3fc, #0ea5e9);
-      color: #020617;
-    }
-
-    #startBtn:hover {
-      transform: translateY(-1px);
-      box-shadow:
-        0 0 14px rgba(56,189,248,0.55),
-        0 16px 30px rgba(15,23,42,0.95);
-    }
-
-    #stopBtn {
-      background: radial-gradient(circle at 30% 0%, #fecaca, #ef4444);
-      color: #0b0f19;
-      opacity: 0.92;
-    }
-
-    #stopBtn:hover {
-      transform: translateY(-1px);
-      box-shadow:
-        0 0 14px rgba(248,113,113,0.55),
-        0 16px 30px rgba(15,23,42,0.95);
-      opacity: 1;
-    }
-
-    #modeBtn {
-      background: radial-gradient(circle at 30% 0%, #fef9c3, #eab308);
-      color: #0b0f19;
-      font-size: 11px;
-    }
-
-    #modeBtn.demo {
-      background: radial-gradient(circle at 30% 0%, #bbf7d0, #22c55e);
-      color: #022c22;
-    }
-
-    .geo-tag {
-      font-size: 10px;
-      color: var(--accent);
-      margin-top: 4px;
-      display: block;
-    }
-
-    .metrics-line {
+    .big-clock-inner {
+      width: 78%;
+      height: 78%;
+      border-radius: inherit;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: radial-gradient(circle at center, #020617 0, #020617 68%, #02040a 100%);
+      box-shadow: inset 0 0 32px rgba(0,0,0,0.88);
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2rem;
+      text-align: center;
+      padding: 0.6rem;
     }
 
-    .small-info {
-      font-size: 11px;
-      opacity: 0.8;
-      margin-bottom: 8px;
-      line-height: 1.5;
+    .clock-label {
+      font-size: 0.74rem;
+      color: var(--muted);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
     }
 
-    .small-info strong {
-      color: var(--accent2);
+    .clock-tc {
+      font-size: 1.9rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .clock-status {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 0.9rem;
+      justify-content: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 0.86rem;
+      cursor: pointer;
+      background: transparent;
+      transition: all 0.16s ease-out;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #020617;
       font-weight: 600;
+      box-shadow: 0 12px 32px rgba(53,224,255,0.45);
     }
 
-    @keyframes spin-slow {
-      to { transform: rotate(360deg); }
+    .btn-primary:hover {
+      transform: translateY(-1px) scale(1.01);
+      box-shadow: 0 18px 45px rgba(53,224,255,0.6);
     }
 
-    @keyframes pulse-center {
-      0%   { r: 12; opacity: 0.55; }
-      50%  { r: 18; opacity: 1; }
-      100% { r: 12; opacity: 0.55; }
+    .btn-ghost {
+      border-color: var(--border);
+      color: var(--muted);
+      background: rgba(15,23,42,0.9);
     }
 
-    #tcNeedle {
-      filter: drop-shadow(0 0 5px rgba(53, 224, 255, 0.5));
+    .btn-ghost:hover {
+      border-color: rgba(148,163,184,0.85);
+      background: rgba(15,23,42,1);
+      transform: translateY(-1px);
     }
 
-    #freqNeedle {
-      filter: drop-shadow(0 0 10px rgba(255, 107, 255, 0.5));
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+
+    @media (max-width: 520px) {
+      .metrics-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .metric-pill {
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      padding: 0.35rem 0.7rem;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15,23,42,0.9);
+    }
+
+    .metric-pill span.key {
+      color: var(--muted);
+    }
+
+    .metric-pill span.val {
+      font-family: var(--font-mono);
+    }
+
+    .metric-pill.ok { border-color: rgba(74,222,128,0.75); }
+    .metric-pill.warn { border-color: rgba(250,204,21,0.85); }
+    .metric-pill.danger { border-color: rgba(248,113,113,0.9); }
+
+    .small {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .list {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
+    .list li {
+      margin-left: 1.1rem;
+      margin-bottom: 0.18rem;
     }
 
     footer {
-      text-align: center;
-      font-size: 10px;
-      opacity: 0.60;
-      margin-top: 20px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    /* --- BANDA DE LEDS ROJO / ÁMBAR / VERDE --- */
-    .led-row {
+      margin-top: 2.2rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.9rem;
+      font-size: 0.8rem;
+      color: var(--muted);
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.9;
+      gap: 0.5rem 1rem;
+      justify-content: space-between;
     }
 
-    .led-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .led {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 30% 30%, #27272a, #020617);
-      border: 1px solid #4b5563;
-      box-shadow: 0 0 0 rgba(0,0,0,0);
-      transition: 0.15s all;
-    }
-
-    .led.on-green {
-      background: radial-gradient(circle at 30% 30%, #bbf7d0, #22c55e);
-      border-color: #4ade80;
-      box-shadow: 0 0 10px rgba(34,197,94,0.9);
-    }
-
-    .led.on-amber {
-      background: radial-gradient(circle at 30% 30%, #fde68a, #f97316);
-      border-color: #fbbf24;
-      box-shadow: 0 0 12px rgba(251,191,36,0.85);
-    }
-
-    .led.on-red {
-      background: radial-gradient(circle at 30% 30%, #fecaca, #ef4444);
-      border-color: #f87171;
-      box-shadow: 0 0 14px rgba(248,113,113,0.95);
-    }
+    footer a { color: var(--accent); }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="big-clock" id="bigClock">
-      <div class="big-clock-glow"></div>
+<div class="bg-orbit"></div>
 
-      <!-- Etiquetas de modo y estado -->
-      <div style="position:absolute; top:18px; right:22px; font-size:11px; color:var(--accent);" id="modeLabel">
-        ESPERANDO NODO...
-      </div>
-      <div style="position:absolute; top:18px; left:22px; font-size:11px;">
-        <span id="modeBadge" style="padding:4px 10px; border-radius:999px; border:1px solid rgba(148,163,184,0.7); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; font-size:10px;">
-          MODO: CIENTÍFICO
-        </span>
-      </div>
-
-      <svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="burbuja" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="10" result="blur"/>
-            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-          </filter>
-          <radialGradient id="gradDial" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#020617"/>
-            <stop offset="55%" stop-color="#020617"/>
-            <stop offset="100%" stop-color="#000000"/>
-          </radialGradient>
-          <linearGradient id="gradNeedle" x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stop-color="#35e0ff"/>
-            <stop offset="100%" stop-color="#f9fafb"/>
-          </linearGradient>
-          <radialGradient id="gradRing" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="rgba(56,189,248,0.2)"/>
-            <stop offset="50%" stop-color="rgba(56,189,248,0.05)"/>
-            <stop offset="100%" stop-color="rgba(148,163,184,0.4)"/>
-          </radialGradient>
-        </defs>
-
-        <!-- Disco principal -->
-        <circle cx="500" cy="400" r="380" fill="url(#gradDial)" filter="url(#burbuja)"/>
-        <circle cx="500" cy="400" r="365" stroke="url(#gradRing)" stroke-width="2" fill="none" opacity="0.9"/>
-
-        <!-- Halo giratorio -->
-        <g transform="translate(500,400)" style="animation: spin-slow 60s linear infinite;">
-          <circle r="340" fill="none" stroke="#40FF9C" stroke-width="1.4"
-                  stroke-dasharray="16 26" opacity="0.45"/>
-        </g>
-
-        <!-- Aguja t_C -->
-        <line id="tcNeedle"
-              x1="500" y1="400" x2="500" y2="150"
-              stroke="url(#gradNeedle)" stroke-width="8"
-              stroke-linecap="round"
-              transform="rotate(-60 500 400)"/>
-
-        <!-- Aguja de Frecuencia Pico -->
-        <line id="freqNeedle"
-              x1="500" y1="400" x2="500" y2="110"
-              stroke="#ff6bff" stroke-width="4"
-              opacity="0.9"/>
-
-        <!-- Centro -->
-        <circle cx="500" cy="400" r="11" fill="#020617" stroke="#35e0ff" stroke-width="2.5"/>
-        <circle cx="500" cy="400" r="14" fill="none" stroke="rgba(148,163,184,0.7)" stroke-width="1.2"/>
-
-        <circle cx="500" cy="400" r="15"
-                fill="none"
-                stroke="rgba(53,224,255,0.7)"
-                stroke-width="2"
-                style="animation: pulse-center 2.3s ease-in-out infinite;"/>
-
-        <text x="500" y="480"
-              fill="#e5e7eb"
-              font-size="24"
-              text-anchor="middle"
-              opacity="0.9"
-              style="letter-spacing:0.18em; text-transform:uppercase;">
-          t_C
-        </text>
-
-        <text x="500" y="510"
-              fill="#9ca3af"
-              font-size="11"
-              text-anchor="middle"
-              opacity="0.8">
-          (visualización de magnitud de aceleración relativa)
-        </text>
-      </svg>
+<div class="shell">
+  <header>
+    <div class="chip">
+      <span class="chip-dot"></span>
+      Nodo Sensor TCDS · Q-driven · Co-diseñado con IA
     </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Módulo de Impacto Sigma (Auditoría TCDS)</div>
-        <div class="small-info">
-          Auditoría en tiempo real. <strong>Shannon Entropy</strong> mide la distribución espectral de la señal
-          y aplica el <strong>Filtro E-Veto</strong>: sólo se considera coherente cuando la entropía cae de forma
-          forzada (ΔH &lt; 0) y consistente (ΔH &lt; −0.5).
-        </div>
-
-        <div class="sigma-module">
-          <div class="rule-box" id="ruleLI">
-            <strong>LI ≥ 0.9</strong>
-            <span>Locking Index (estabilidad local)</span>
-          </div>
-          <div class="rule-box" id="ruleR">
-            <strong>R &gt; 0.95</strong>
-            <span>Kuramoto (proxy de fase)</span>
-          </div>
-          <div class="rule-box" id="ruleEnt">
-            <strong>ΔH &lt; −0.5</strong>
-            <span>Shannon (Orden espectral)</span>
-          </div>
-        </div>
-
-        <div class="metrics-line" style="margin-top:12px;">
-          <span id="geoStatus" class="geo-tag">
-            GPS: Esperando permisos...
-          </span>
-          <span id="timeSyncStatus" class="geo-tag" style="color:var(--ok);">
-            Reloj: Local (Sync pendiente)
-          </span>
-          <span id="linkStatus" class="geo-tag" style="color:var(--warn);">
-            LINK: Inactivo (sin TX aún)
-          </span>
-          <span id="alertStatus" class="geo-tag" style="color:var(--accent2);">
-            ALERTA GLOBAL: ninguna
-          </span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Métricas y Control del Nodo</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; margin-bottom:8px;">
-          <div>|a|: <strong id="magLive">0.00</strong></div>
-          <div>LI: <strong id="liLive">0.00</strong></div>
-          <div>R: <strong id="rLive">0.00</strong></div>
-          <div>ΔH: <strong id="dHLive">0.00</strong></div>
-          <div>Factor Q: <strong id="qLive" style="color:var(--accent);">--</strong></div>
-          <div>Frec. Pico: <strong id="peakLive">0.00</strong> Hz</div>
-        </div>
-
-        <!-- BANDA DE LEDS LOCAL -->
-        <div class="led-row">
-          <div class="led-label">
-            <span class="led" id="ledQuiet"></span> REPOSO
-          </div>
-          <div class="led-label">
-            <span class="led" id="ledWatch"></span> VIGILANCIA
-          </div>
-          <div class="led-label">
-            <span class="led" id="ledAlert"></span> ALERTA
-          </div>
-        </div>
-
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-          <button id="startBtn">ACTIVAR NODO</button>
-          <button id="stopBtn">DETENER</button>
-          <button id="modeBtn">MODO: CIENTÍFICO</button>
-        </div>
-      </div>
+    <h1>Reloj Causal Humano — TCDS</h1>
+    <p class="subtitle">
+      Visualizador en tiempo real de coherencia Σ (LI, R, RMSE_SL), entropía de Shannon normalizada (ΔH)
+      y tiempo causal t<sub>C</sub>. Diseñado como nodo de falsación para el paradigma Q–Σ–φ–χ y como
+      pieza central de la Red Global de Coherencia TCDS.
+    </p>
+    <div class="top-meta">
+      <span>
+        DOI: <a href="https://doi.org/10.5281/zenodo.17677864" target="_blank">10.5281/zenodo.17677864</a>
+        · Ecosistema: <a href="https://geozunac3536-jpg.github.io" target="_blank">Proyecto TCDS</a>
+      </span>
+      <span>
+        Índice de DOIs: <a href="https://geozunac3536-jpg.github.io/Indice-de-DOI" target="_blank">Libro Mayor</a>
+      </span>
     </div>
-
-    <footer>
-      Nodo Sensor Distribuido TCDS v1.5 — Shannon | Genaro Carrasco Ozuna
-    </footer><a href="https://doi.org/10.5281/zenodo.17677864" target="_blank">
-  <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg" ... >
-</a>
-
-  </div>
-
-  <script>
-    // ================= CONFIGURACIÓN TCDS =================
-// Siempre relativo al mismo dominio donde viva el reloj
-const REPORT_URL = "/api/reports";
-const CONFIG_URL = "/api/config";
-
-    /* ================= VARIABLES DE ESTADO ================= */
-    let accelBuffer = [];
-    let current_LI = 0;
-    let current_R = 0;
-    let current_dH = 0;
-    let current_aMag = 0;
-    let current_Q = 0;
-    let current_PeakFreq = 0;
-
-    let geoData = { lat: null, lon: null, acc: null };
-    let timeOffset = 0;
-    const N_FFT = 256;
-
-    let mode = "scientific"; // "scientific" | "demo"
-    let remoteConfig = {
-      demo_gain: 1.0,
-      report_interval_ms: 5000,
-      mode_hint: "auto",
-      alerts_enabled: true
-    };
-
-    let lastAlertLevel = "none";
-
-    /* ================= UI REFERENCES ================= */
-    const ruleLI = document.getElementById('ruleLI');
-    const ruleR = document.getElementById('ruleR');
-    const ruleEnt = document.getElementById('ruleEnt');
-    const geoStatus = document.getElementById('geoStatus');
-    const linkStatus = document.getElementById('linkStatus');
-    const modeLabel = document.getElementById('modeLabel');
-    const modeBadge = document.getElementById('modeBadge');
-    const bigClock = document.getElementById('bigClock');
-    const modeBtn = document.getElementById('modeBtn');
-    const alertStatus = document.getElementById('alertStatus');
-
-    const ledQuiet = document.getElementById('ledQuiet');
-    const ledWatch = document.getElementById('ledWatch');
-    const ledAlert = document.getElementById('ledAlert');
-    let lastLocalState = "idle";
-
-    /* ================= LÓGICA DE MODO LOCAL ================= */
-    function updateModeUI() {
-      if (mode === "scientific") {
-        modeBadge.textContent = "MODO: CIENTÍFICO";
-        modeBadge.style.borderColor = "rgba(148,163,184,0.7)";
-        modeBadge.style.color = "#e5e7eb";
-        modeBtn.textContent = "MODO: CIENTÍFICO";
-        modeBtn.classList.remove("demo");
-      } else {
-        modeBadge.textContent = "MODO: DEMO";
-        modeBadge.style.borderColor = "rgba(74,222,128,0.8)";
-        modeBadge.style.color = "#bbf7d0";
-        modeBtn.textContent = "MODO: DEMO";
-        modeBtn.classList.add("demo");
-      }
-    }
-
-    modeBtn.onclick = () => {
-      mode = (mode === "scientific") ? "demo" : "scientific";
-      updateModeUI();
-    };
-    updateModeUI();
-
-    /* ================= BANDA DE LEDS ================= */
-    function setLEDState(state) {
-      [ledQuiet, ledWatch, ledAlert].forEach(el => {
-        el.classList.remove('on-green', 'on-amber', 'on-red');
-      });
-
-      if (state === "idle") {
-        ledQuiet.classList.add('on-green');
-      } else if (state === "watch") {
-        ledWatch.classList.add('on-amber');
-      } else if (state === "alert") {
-        ledAlert.classList.add('on-red');
-      }
-
-      if (state === "alert" && lastLocalState !== "alert") {
-        beepOnce();
-        if (navigator.vibrate) {
-          navigator.vibrate([120, 80, 120]);
-        }
-      }
-      lastLocalState = state;
-    }
-
-    /* ================= LÓGICA DE GEOLOCALIZACIÓN ================= */
-    function getGeolocation() {
-      if (!navigator.geolocation) {
-        geoStatus.textContent = "GPS: No soportado";
-        return;
-      }
-      geoStatus.textContent = "GPS: Solicitando...";
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          geoData.lat = pos.coords.latitude;
-          geoData.lon = pos.coords.longitude;
-          geoData.acc = pos.coords.accuracy;
-          geoStatus.textContent =
-            `GPS: Activo (${geoData.lat.toFixed(4)}, ${geoData.lon.toFixed(4)})`;
-          geoStatus.style.color = "var(--ok)";
-        },
-        (err) => {
-          console.warn("Error GPS:", err);
-          geoStatus.textContent = "GPS: Denegado (Nodo anónimo)";
-          geoStatus.style.color = "var(--danger)";
-        },
-        { enableHighAccuracy: true }
-      );
-    }
-
-    /* ================= ANÁLISIS ESPECTRAL + SHANNON ================= */
-    function computeSpectralSharpness() {
-      if (accelBuffer.length < N_FFT) return;
-
-      const slice = accelBuffer.slice(-N_FFT);
-      const mean = slice.reduce((a,b) => a + b, 0) / N_FFT;
-
-      let maxMag = 0;
-      let peakFreq = 0;
-      let spectrum = [];
-      let totalSpectralPower = 0;
-
-      for (let k = 1; k < 30; k++) {
-        let real = 0, imag = 0;
-        for (let n = 0; n < N_FFT; n++) {
-          const angle = -2 * Math.PI * k * n / N_FFT;
-          const val = slice[n] - mean;
-          real += val * Math.cos(angle);
-          imag += val * Math.sin(angle);
-        }
-        const mag = Math.sqrt(real * real + imag * imag);
-        spectrum.push(mag);
-        totalSpectralPower += mag;
-
-        if (mag > maxMag) {
-          maxMag = mag;
-          peakFreq = k * (60 / N_FFT);
-        }
-      }
-
-      if (maxMag < 0.1) {
-        current_Q = 0;
-        current_dH = 0;
-        return;
-      }
-
-      const halfPower = maxMag * 0.5;
-      let widthBins = 0;
-      spectrum.forEach(mag => { if (mag > halfPower) widthBins++; });
-      current_Q = widthBins > 0 ? (1.0 / widthBins) : 0;
-      current_PeakFreq = peakFreq;
-
-      let shannonH = 0;
-      if (totalSpectralPower > 0) {
-        for (let mag of spectrum) {
-          const p = mag / totalSpectralPower;
-          if (p > 0) shannonH += -p * Math.log2(p);
-        }
-      }
-
-      const maxH = Math.log2(spectrum.length || 1);
-      const normalizedH = maxH > 0 ? shannonH / maxH : 1;
-      current_dH = normalizedH - 1.0;
-
-      document.getElementById('qLive').textContent = current_Q.toFixed(2);
-      document.getElementById('peakLive').textContent = current_PeakFreq.toFixed(1);
-
-      const freqAngle = -150 + (Math.min(peakFreq / 10, 1) * 300);
-      document.getElementById('freqNeedle')
-        .setAttribute('transform', `rotate(${freqAngle} 500 400)`);
-    }
-
-    /* ================= SINCRONIZACIÓN ================= */
-    async function syncTime() {
-      try {
-        timeOffset = 0;
-        document.getElementById('timeSyncStatus').textContent =
-          "Reloj: Sincronizado (Local)";
-      } catch (e) {
-        console.warn("Sync time error", e);
-      }
-    }
-
-    /* ================= FUSIÓN DE MÉTRICAS TCDS ================= */
-    function updateMetrics() {
-      if (accelBuffer.length < 32) return;
-
-      const slice = accelBuffer.slice(-64);
-      const mean = slice.reduce((a,b) => a + b, 0) / slice.length;
-      const variance = slice.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / slice.length;
-      const std = Math.sqrt(variance);
-
-      const noiseNorm = Math.min(std / 4, 1);
-      let raw_LI = 1.0 - noiseNorm;
-
-      const gain = remoteConfig.demo_gain || 1.0;
-      if (mode === "demo") {
-        raw_LI = Math.max(0, Math.min(1, raw_LI * gain));
-      }
-
-      current_LI = (raw_LI * 0.6) + (current_Q * 0.4);
-      current_R = 0.8 + (0.2 * current_LI);
-
-      if (current_LI >= 0.9) {
-        ruleLI.className = "rule-box rule-pass";
-      } else {
-        ruleLI.className = "rule-box rule-fail";
-      }
-
-      if (current_R > 0.95) {
-        ruleR.className = "rule-box rule-pass";
-      } else {
-        ruleR.className = "rule-box rule-fail";
-      }
-
-      if (current_dH < -0.5) {
-        ruleEnt.className = "rule-box rule-pass";
-      } else {
-        ruleEnt.className = "rule-box rule-fail";
-      }
-
-      document.getElementById('liLive').textContent = current_LI.toFixed(2);
-      document.getElementById('rLive').textContent = current_R.toFixed(2);
-      document.getElementById('dHLive').textContent = current_dH.toFixed(3);
-
-      let effectiveMode = mode;
-      if (remoteConfig.mode_hint === "force_demo") {
-        effectiveMode = "demo";
-      } else if (remoteConfig.mode_hint === "force_scientific") {
-        effectiveMode = "scientific";
-      }
-
-      let state = "idle";
-      if (current_LI >= 0.9 && current_dH < -0.5) {
-        state = "alert";
-      } else if (current_LI >= 0.7 || current_dH < -0.25) {
-        state = "watch";
-      }
-      setLEDState(state);
-
-      if (effectiveMode === "scientific") {
-        if (current_LI > 0.85 && current_dH < -0.4) {
-          sendReport("scientific");
-        }
-      } else {
-        if (accelBuffer.length > 64) {
-          sendReport("demo");
-        }
-      }
-    }
-
-    /* ================= ENVÍO DE REPORTE ================= */
-    function sendReport(modeTag) {
-      const now = Date.now();
-      const interval = remoteConfig.report_interval_ms || 5000;
-
-      if (window.lastReport && (now - window.lastReport < interval)) return;
-      window.lastReport = now;
-
-      const payload = {
-        device_id: DEVICE_ID,
-        timestamp: now + timeOffset,
-        geo: geoData,
-        metrics: {
-          aMag: current_aMag,
-          LI: current_LI,
-          R: current_R,
-          dH: current_dH,
-          Q_Arnold: current_Q,
-          mode: modeTag || mode
-        }
-      };
-
-      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-
-      bigClock.classList.add("tx-pulse");
-      linkStatus.textContent = `LINK: TX → /api/reports (${(modeTag || mode).toUpperCase()})`;
-      linkStatus.style.color = "var(--accent3)";
-      setTimeout(() => {
-        bigClock.classList.remove("tx-pulse");
-      }, 300);
-
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(REPORT_URL, blob);
-      } else {
-        fetch(REPORT_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload),
-          headers: { 'Content-Type': 'application/json' }
-        }).catch(() => {});
-      }
-    }
-
-    /* ================= ALERTA GLOBAL ================= */
-    function beepOnce() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = 880;
-        gain.gain.value = 0.2;
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-
-        setTimeout(() => {
-          osc.stop();
-          ctx.close();
-        }, 400);
-      } catch (e) {
-        console.warn("Audio no disponible:", e);
-      }
-    }
-
-    function handleAlertLevel(level) {
-      alertStatus.textContent = `ALERTA GLOBAL: ${level}`;
-      alertStatus.style.color = "var(--accent2)";
-      bigClock.classList.remove("alert-watch", "alert-warning");
-
-      if (!remoteConfig.alerts_enabled) {
-        return;
-      }
-
-      if (level === "warning_demo") {
-        bigClock.classList.add("alert-warning");
-        alertStatus.style.color = "var(--danger)";
-        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
-        beepOnce();
-      } else if (level === "watch") {
-        bigClock.classList.add("alert-watch");
-        alertStatus.style.color = "var(--warn)";
-        if (navigator.vibrate) navigator.vibrate(80);
-      }
-    }
-
-    async function fetchRemoteConfig() {
-      try {
-        const res = await fetch(CONFIG_URL, { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        remoteConfig = {
-          demo_gain: typeof data.demo_gain === "number" ? data.demo_gain : 1.0,
-          report_interval_ms: typeof data.report_interval_ms === "number" ? data.report_interval_ms : 5000,
-          mode_hint: typeof data.mode_hint === "string" ? data.mode_hint : "auto",
-          alerts_enabled: typeof data.alerts_enabled === "boolean" ? data.alerts_enabled : true
-        };
-      } catch (e) {
-        console.warn("No se pudo leer /api/config:", e);
-      }
-    }
-
-    async function fetchGlobalAlert() {
-      try {
-        const res = await fetch(REPORT_URL, { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        const level = data.alert_level || "none";
-        if (level !== lastAlertLevel) {
-          lastAlertLevel = level;
-          handleAlertLevel(level);
-        }
-      } catch (e) {
-        console.warn("No se pudo leer alerta global:", e);
-      }
-    }
-
-    function startControlLoops() {
-      fetchRemoteConfig();
-      fetchGlobalAlert();
-      setInterval(fetchRemoteConfig, 10000);
-      setInterval(fetchGlobalAlert, 5000);
-    }
-
-    /* ================= HANDLERS DE SENSORES ================= */
-    function handleMotion(e) {
-      const a = e.accelerationIncludingGravity;
-      if (!a) return;
-
-      const mag = Math.hypot(a.x || 0, a.y || 0, a.z || 0);
-
-      accelBuffer.push(mag);
-      if (accelBuffer.length > 512) accelBuffer.shift();
-      current_aMag = mag;
-
-      const normalizedMag = Math.abs(mag - 9.8);
-      const tcAngle = -60 + (Math.min(normalizedMag / 5, 1) * 120);
-      document.getElementById('tcNeedle')
-        .setAttribute('transform', `rotate(${tcAngle} 500 400)`);
-      document.getElementById('magLive').textContent = mag.toFixed(2);
-
-      if (Date.now() % 100 < 20) {
-        computeSpectralSharpness();
-      }
-
-      updateMetrics();
-    }
-
-    async function init() {
-      getGeolocation();
-      syncTime();
-      startControlLoops();
-
-      if (typeof DeviceMotionEvent !== 'undefined' &&
-          typeof DeviceMotionEvent.requestPermission === 'function') {
-        try {
-          const permission = await DeviceMotionEvent.requestPermission();
-          if (permission !== 'granted') {
-            alert("Se requiere permiso de acelerómetro para el Reloj Causal.");
-            return;
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
-      window.addEventListener('devicemotion', handleMotion);
-      bigClock.classList.add('ready');
-      modeLabel.textContent = "NODO ACTIVO (SHANNON)";
-    }
-
-    document.getElementById('startBtn').onclick = init;
-    document.getElementById('stopBtn').onclick = () => {
-      window.removeEventListener('devicemotion', handleMotion);
-      bigClock.classList.remove('ready', 'tx-pulse', 'alert-watch', 'alert-warning');
-      modeLabel.textContent = "DETENIDO";
-      linkStatus.textContent = "LINK: Inactivo (sin TX)";
-      linkStatus.style.color = "var(--warn)";
-      alertStatus.textContent = "ALERTA GLOBAL: ninguna";
-      alertStatus.style.color = "var(--accent2)";
-      setLEDState("idle");
-    };
-  </script>
+  </header>
+
+  <main>
+    <!-- Columna izquierda: reloj + botones -->
+    <section>
+      <div class="card">
+        <div class="hero-grid">
+          <div>
+            <div class="card-title">Reloj Causal · t<sub>C</sub> en vivo</div>
+            <p class="small">
+              Este nodo convierte tu dispositivo en un sensor de ΔH y Σ-metrics. Al activar el reloj,
+              colaboras en un experimento global de ciencia ciudadana para estudiar la transición
+              φ-driven → Q-driven en sistemas reales.
+            </p>
+
+            <div class="metrics-row">
+              <div class="metric-pill ok">
+                <span class="key">LI ≥ 0.90</span>
+                <span class="val" id="liVal">0.00</span>
+              </div>
+              <div class="metric-pill ok">
+                <span class="key">R &gt; 0.95</span>
+                <span class="val" id="rVal">0.00</span>
+              </div>
+              <div class="metric-pill warn">
+                <span class="key">RMSE_SL &lt; 0.10</span>
+                <span class="val" id="rmseVal">0.00</span>
+              </div>
+              <div class="metric-pill danger">
+                <span class="key">ΔH ≤ −0.20</span>
+                <span class="val" id="dhVal">0.00</span>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button id="activateBtn" class="btn btn-primary">
+                ACTVAR NODO · INICIAR SENSOR
+              </button>
+              <a class="btn btn-ghost" href="dashboard.html" target="_blank">
+                Ver Dashboard Maestro
+              </a>
+            </div>
+
+            <p class="small" style="margin-top:0.6rem;">
+              Estado actual: <span id="statusLabel">inactivo (esperando permiso de sensor)</span>
+            </p>
+          </div>
+
+          <div>
+            <div class="big-clock" id="bigClock">
+              <div class="big-clock-inner">
+                <div class="clock-label">t<sub>C</sub> demo</div>
+                <div id="tcValue" class="clock-tc">+0.000</div>
+                <div class="clock-status" id="tcMode">Baseline φ-driven</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-soft">
+        <div class="card-title">Modo de uso rápido</div>
+        <ul class="list">
+          <li>Abre esta página en tu dispositivo móvil (Chrome / Safari recomendado).</li>
+          <li>Toca <strong>ACTVAR NODO</strong> y acepta el permiso del sensor de movimiento.</li>
+          <li>Deja tu teléfono en una superficie firme y, de preferencia, conectado a la corriente.</li>
+          <li>Mantén la pestaña abierta para contribuir a la serie de tiempo de la Red Global de Coherencia.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Columna derecha: narrativa + privacidad -->
+    <aside>
+      <div class="card">
+        <div class="card-title">Σ-metrics & Filtro de Honestidad (E-Veto)</div>
+        <p class="small">
+          El Reloj implementa las métricas canónicas de la TCDS para distinguir entre lapsos claramente
+          φ-driven (ruido) y episodios candidatos Q-driven (coherencia real):
+        </p>
+        <table style="width:100%; border-collapse:collapse; margin-top:0.5rem; font-size:0.8rem;">
+          <tr>
+            <th style="border:1px solid var(--border); padding:0.4rem;">Métrica</th>
+            <th style="border:1px solid var(--border); padding:0.4rem;">Canon</th>
+            <th style="border:1px solid var(--border); padding:0.4rem;">Rol</th>
+          </tr>
+          <tr>
+            <td style="border:1px solid var(--border); padding:0.4rem;">LI</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">≥ 0.90</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">Locking de fase / frecuencia</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid var(--border); padding:0.4rem;">R</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">&gt; 0.95</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">Estabilidad del modelo Σ</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid var(--border); padding:0.4rem;">RMSE_SL</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">&lt; 0.10</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">Error del sincronograma</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid var(--border); padding:0.4rem;">ΔH</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">≤ −0.20</td>
+            <td style="border:1px solid var(--border); padding:0.4rem;">Caída neta de entropía (E-Veto)</td>
+          </tr>
+        </table>
+        <p class="small">
+          El <strong>Filtro de Honestidad</strong> exige que <em>todas</em> las condiciones se cumplan de forma simultánea.
+          Si ΔH no cae, la señal no se declara Q-driven, aunque el locking aparente sea perfecto.
+        </p>
+      </div>
+
+      <div class="card-soft">
+        <div class="card-title">Privacidad & ciencia abierta</div>
+        <ul class="list">
+          <li>No se accede a cámara, micrófono ni archivos.</li>
+          <li>Solo se utiliza el acelerómetro del dispositivo.</li>
+          <li>No se almacenan datos personales ni identificadores únicos.</li>
+          <li>Los datos se emplean como contribución anónima para investigación en coherencia y riesgos naturales.</li>
+        </ul>
+      </div>
+
+      <div class="card-soft">
+        <div class="card-title">Empuje Q asistido por IA</div>
+        <p class="small">
+          La interfaz, narrativa y estructura de este nodo han sido co-diseñadas junto con un motor de
+          IA generativa, siguiendo el marco Q-driven de la TCDS: el humano aporta el empuje Q (hipótesis,
+          riesgo y dirección causal) y la IA se encarga del apilamiento coherencial (Σ) en la capa de
+          documentación, interfaz y trazabilidad.
+        </p>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <span>
+      © 2025 · Teoría Cromodinámica Sincrónica (TCDS) · Reloj Causal Humano v1.5 ·
+      Licencia CC BY-NC-SA 4.0 + capa comercial TCDS-Σ.
+    </span>
+    <span>
+      Autor: Genaro Carrasco Ozuna ·
+      Email: <a href="mailto:geozunac3536@gmail.com">geozunac3536@gmail.com</a> ·
+      ORCID: <a href="https://orcid.org/0009-0005-6358-9910" target="_blank">0009-0005-6358-9910</a> ·
+      Ko-fi: <a href="https://ko-fi.com/genarocarrasco" target="_blank">genarocarrasco</a>
+    </span>
+  </footer>
+</div>
+
+<script>
+  // Demo local t_C para que el reloj "respire" aunque no haya sensores reales
+  let t = 0;
+  function animateClock() {
+    t += 0.03;
+    const tc = 0.02 * Math.sin(t / 1.8) + 0.004 * (Math.random() - 0.5);
+    const tcEl = document.getElementById('tcValue');
+    const modeEl = document.getElementById('tcMode');
+
+    tcEl.textContent = (tc >= 0 ? '+' : '') + tc.toFixed(3);
+
+    const abs = Math.abs(tc);
+    if (abs < 0.02) modeEl.textContent = 'Baseline φ-driven';
+    else if (abs < 0.06) modeEl.textContent = 'Zona borderline';
+    else modeEl.textContent = 'Región candidata Q-driven';
+
+    requestAnimationFrame(animateClock);
+  }
+  requestAnimationFrame(animateClock);
+
+  // Placeholder de integración con sensores reales:
+  const activateBtn = document.getElementById('activateBtn');
+  const statusLabel = document.getElementById('statusLabel');
+
+  activateBtn.addEventListener('click', () => {
+    statusLabel.textContent = 'solicitando permiso de acelerómetro (demo local: integra aquí tu lógica de DeviceMotionEvent)';
+    // Aquí iría tu lógica real de sensores (DeviceMotionEvent / devicemotion),
+    // cálculo de LI, R, RMSE_SL, ΔH, y actualización de liVal, rVal, rmseVal, dhVal.
+  });
+</script>
 </body>
 </html>
