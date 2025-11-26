@@ -1,63 +1,66 @@
-// Configuración global en memoria (se reinicia cuando Vercel recicla la función)
+// /api/config.js
+// Configuración global del Reloj Causal Humano — TCDS
+// Vive en memoria mientras la función serverless siga "caliente".
+
+import { applyCors } from "./utils/cors.js";
+
+// Inicializa el objeto global sólo una vez
 if (!globalThis.__TCDS_CONFIG__) {
   globalThis.__TCDS_CONFIG__ = {
     mode_hint: "auto",          // auto | force_scientific | force_demo
-    report_interval_ms: 5000,   // default para nodos
-    alerts_enabled: true
+    report_interval_ms: 5000,   // intervalo sugerido para envío de mediciones
+    alerts_enabled: true,       // habilitar/inhabilitar alertas globales
+    version: "1.5.0",           // versión del nodo
+    updated_at: new Date().toISOString()
   };
 }
 
-const ALLOWED_ORIGINS = [
-  "https://reloj-causal-humano-tcds.vercel.app",
-  "https://tcds-reloj-causal.vercel.app",
-  "https://geozunac3536-jpg.github.io"
-];
-
-// Clave mínima de control (visible en el frontend, sirve como "llave del tablero")
-const SERVER_KEY = process.env.TCDS_CONFIG_KEY || "TCDS_CONFIG_DEV_KEY";
+// Clave mínima de control (visible en el frontend, solo como "llave de tablero")
+const PUBLIC_DASH_KEY = "TCDS-RELOJ-CAUSAL-KEY";
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || "";
-  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  applyCors(req, res);
 
-  res.setHeader("Access-Control-Allow-Origin", allowOrigin);
-  res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-TCDS-KEY");
-
+  // Preflight CORS
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  const cfg = globalThis.__TCDS_CONFIG__;
-
-  // === GET: los nodos leen la configuración ===
+  // GET → leer configuración actual
   if (req.method === "GET") {
     return res.status(200).json({
-      ...cfg,
-      server_time: Date.now()
+      ok: true,
+      config: globalThis.__TCDS_CONFIG__,
+      dash_key: PUBLIC_DASH_KEY
     });
   }
 
-  // === POST: sólo el dashboard (con llave) puede modificar ===
+  // POST → actualizar configuración (control básico desde frontend)
   if (req.method === "POST") {
-    const key = req.headers["x-tcds-key"];
-    if (!key || key !== SERVER_KEY) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
     try {
       const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
 
+      // Validación mínima por clave
+      if (body.dash_key && body.dash_key !== PUBLIC_DASH_KEY) {
+        return res.status(403).json({ error: "Clave de tablero inválida" });
+      }
+
+      const cfg = globalThis.__TCDS_CONFIG__;
+
       if (typeof body.mode_hint === "string") {
+        // auto | force_scientific | force_demo
         cfg.mode_hint = body.mode_hint;
       }
-      if (typeof body.report_interval_ms === "number" && body.report_interval_ms >= 200) {
+
+      if (typeof body.report_interval_ms === "number" && body.report_interval_ms > 500) {
         cfg.report_interval_ms = body.report_interval_ms;
       }
+
       if (typeof body.alerts_enabled === "boolean") {
         cfg.alerts_enabled = body.alerts_enabled;
       }
+
+      cfg.updated_at = new Date().toISOString();
 
       console.log("[CONFIG] Actualizada:", cfg);
 
