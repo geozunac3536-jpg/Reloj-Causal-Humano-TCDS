@@ -9,7 +9,7 @@ const els = {
   rmse: document.getElementById("rmseVal"),
   dh: document.getElementById("dhVal"),
   tc: document.getElementById("tcValue"),
-  tcMode: document.getElementById("tcMode"),
+  tcMode: document.getElementById("tcMode")
 };
 
 let config = null;
@@ -17,7 +17,8 @@ let sensorActive = false;
 let lastSampleTime = 0;
 let windowSamples = [];
 
-// 1) Cargar configuración global del backend
+// ================== CONFIG ==================
+
 async function loadConfig() {
   try {
     const resp = await fetch("/api/config");
@@ -31,84 +32,22 @@ async function loadConfig() {
       mode_hint: "auto",
       report_interval_ms: 5000,
       alerts_enabled: true,
-      version: "1.5.0",
+      version: "1.5.0"
     };
   }
 }
 
-// 2) Clasificar ventana con la misma lógica del backend
-function classifyWindow(li, r, rmse, dh) {
-  const li_min = 0.9;
-  const r_min = 0.95;
-  const rmse_max = 0.10;
-  const dh_max = -0.20;
+// ================== HELPERS E-VETO ==================
 
-  const kpiOk = li >= li_min && r > r_min && rmse < rmse_max;
-  const entropyOk = dh <= dh_max;
-
-  if (!kpiOk && !entropyOk) return "phi";
-  if (kpiOk && entropyOk) return "q";
-  return "borderline";
-}
-
-// 3) Actualizar UI local con una ventana Σ
-function updateUI(sample) {
-  const { li, r, rmse_sl, dh, t_c } = sample;
-
-  if (typeof li === "number") els.li.textContent = li.toFixed(2);
-  if (typeof r === "number") els.r.textContent = r.toFixed(2);
-  if (typeof rmse_sl === "number") els.rmse.textContent = rmse_sl.toFixed(2);
-  if (typeof dh === "number") els.dh.textContent = dh.toFixed(2);
-
-  if (typeof t_c === "number") {
-    els.tc.textContent = (t_c >= 0 ? "+" : "") + t_c.toFixed(3);
-  }
-
-  const cls = classifyWindow(li, r, rmse_sl, dh);
-  if (cls === "phi") {
-    els.tcMode.textContent = "LAPSO φ-driven (ruido / baseline)";
-  } else if (cls === "borderline") {
-    els.tcMode.textContent = "Zona borderline (transición φ ↔ Q)";
-  } else {
-    els.tcMode.textContent = "Candidata Q-driven (coherencia Σ + ΔH)";
-  }
-
-  els.status.textContent = `ventana local: ${cls}`;
-}
-
-// 4) Enviar ventana al backend
-async function sendReport(sample) {
-  try {
-    const resp = await fetch("/api/reports", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sample),
-    });
-    const json = await resp.json();
-    console.log("[TCDS] Reporte enviado, clase E-Veto:", json.class);
-  } catch (e) {
-    console.warn("[TCDS] Error enviando reporte a /api/reports:", e);
-  }
-}
-// ================== HELPERS E-VETO (ΔH, LI, κΣ) ==================
-
-/**
- * Calcula la entropía espectral de Shannon normalizada ΔH ∈ [-1, 0]
- * a partir de una ventana de magnitudes de aceleración.
- * - Ventana: últimos M puntos (ej. 128)
- * - FFT simplificada (DFT) sobre [0, M/2)
- */
 function computeSpectralEntropy(mags) {
   const N = mags.length;
   if (!N) return { dH: 0, powerSpectrum: [] };
 
-  // Tomamos los últimos M puntos para mantener costo bajo
   const M = Math.min(128, N);
   const start = N - M;
   const x = new Array(M);
-
-  // Quitamos media (centrado)
   let sum = 0;
+
   for (let i = 0; i < M; i++) {
     const v = mags[start + i];
     sum += v;
@@ -119,14 +58,12 @@ function computeSpectralEntropy(mags) {
     x[i] -= mean;
   }
 
-  const K = Math.floor(M / 2);    // sólo hasta Nyquist
+  const K = Math.floor(M / 2);
   const power = new Array(K).fill(0);
-
-  // DFT simplificada (O(M^2), pero M pequeño => ok en móvil)
   const TWO_PI = 2 * Math.PI;
+
   for (let k = 0; k < K; k++) {
-    let re = 0;
-    let im = 0;
+    let re = 0, im = 0;
     for (let n = 0; n < M; n++) {
       const angle = -TWO_PI * k * n / M;
       const xn = x[n];
@@ -142,7 +79,6 @@ function computeSpectralEntropy(mags) {
     return { dH: 0, powerSpectrum: power };
   }
 
-  // Shannon H en base 2
   let H = 0;
   for (let k = 0; k < K; k++) {
     const pk = power[k];
@@ -152,21 +88,15 @@ function computeSpectralEntropy(mags) {
   }
 
   const Hmax = Math.log(K) / Math.log(2);
-  const dH = Hmax > 0 ? (H / Hmax - 1.0) : 0;   // ∈ [-1, 0]
+  const dH = Hmax > 0 ? (H / Hmax - 1.0) : 0; // [-1,0]
 
   return { dH, powerSpectrum: power };
 }
 
-/**
- * Calcula Locking Index (LI) combinando:
- * - ruido relativo (σ / |μ|)
- * - factor de agudeza espectral (Q ~ pico / ancho de banda)
- */
 function computeLI(mags, powerSpectrum) {
   const N = mags.length;
   if (!N) return 0;
 
-  // Estadística de ventana
   let sum = 0;
   for (let i = 0; i < N; i++) sum += mags[i];
   const mean = sum / N;
@@ -177,11 +107,9 @@ function computeLI(mags, powerSpectrum) {
     varSum += d * d;
   }
   const std = Math.sqrt(varSum / N);
-
   const noiseFactor = std / (Math.abs(mean) + 1e-6);
-  const liRaw = 1 / (1 + noiseFactor);   // ruido↑ → LI↓
+  const liRaw = 1 / (1 + noiseFactor);
 
-  // Factor Q aproximado
   let Q = 1;
   if (powerSpectrum && powerSpectrum.length > 4) {
     let maxVal = -Infinity;
@@ -193,7 +121,7 @@ function computeLI(mags, powerSpectrum) {
       }
     }
     if (maxVal > 0) {
-      const half = maxVal / Math.E;  // "ancho" a ~1/e
+      const half = maxVal / Math.E;
       let left = maxIdx, right = maxIdx;
       for (let k = maxIdx; k >= 0; k--) {
         if (powerSpectrum[k] < half) { left = k; break; }
@@ -202,20 +130,16 @@ function computeLI(mags, powerSpectrum) {
         if (powerSpectrum[k] < half) { right = k; break; }
       }
       const bwBins = Math.max(1, right - left);
-      const fPeak = maxIdx / powerSpectrum.length; // (0..0.5 aprox)
+      const fPeak = maxIdx / powerSpectrum.length;
       Q = fPeak > 0 ? (fPeak / (bwBins / powerSpectrum.length)) : 1;
     }
   }
 
-  const qNorm = Math.tanh(Q / 8);          // saturamos Q
+  const qNorm = Math.tanh(Q / 8);
   const li = Math.max(0, Math.min(1, liRaw * (0.5 + 0.5 * qNorm)));
   return li;
 }
 
-/**
- * κΣ: razón entre gradiente máximo y amplitud máxima.
- * κΣ > 1 → crecimiento físicamente sospechoso (artefacto).
- */
 function computeKappaSigma(mags) {
   const N = mags.length;
   if (N < 2) return 0;
@@ -233,26 +157,40 @@ function computeKappaSigma(mags) {
   return maxGrad / maxAmp;
 }
 
-/**
- * Filtro E-Veto (núcleo canónico):
- * ΔH < −0.4, LI > 0.85, κΣ ≤ 1.0
- */
 function applyEVeto(dH, LI, kappa) {
   const isOrdered  = (dH < -0.4);
   const isLocked   = (LI > 0.85);
   const isPhysical = (kappa <= 1.0);
 
   if (isOrdered && isLocked && isPhysical) {
-    return "Q_DRIVEN_VALID";      // ALERTA_SISMICA_VALIDA
+    return "Q_DRIVEN_VALID";
   } else {
-    return "PHI_OR_ARTEFACT";     // φ-driven o ruido
+    return "PHI_OR_ARTEFACT";
   }
 }
-// 5) Procesar una muestra cruda del sensor -> construir ventana Σ de ejemplo
-function processRawSample(acc, timestamp) {
-  windowSamples.push({ acc, timestamp });
 
-  // Usamos tamaño de ventana por tiempo (ej: 5s)
+// ================== ENVÍO AL BACKEND ==================
+
+async function sendReport(sample) {
+  try {
+    const resp = await fetch("/api/reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sample)
+    });
+    const json = await resp.json();
+    console.log("[TCDS] Reporte enviado, clase red:", json.class);
+  } catch (e) {
+    console.warn("[TCDS] Error enviando reporte a /api/reports:", e);
+  }
+}
+
+// ================== PROCESO DE VENTANA ==================
+
+function processRawSample(acc, timestamp) {
+  const mag = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+  windowSamples.push({ mag, timestamp });
+
   const now = timestamp;
   if (!lastSampleTime) lastSampleTime = now;
 
@@ -262,57 +200,73 @@ function processRawSample(acc, timestamp) {
 
   lastSampleTime = now;
 
-  // ======== AQUÍ VA TU CÁLCULO REAL DE Σ-METRICS ========
-  // Esto es una aproximación dummy: usa varianza/energía como proxy.
-  const n = windowSamples.length;
-  if (!n) return;
+  const N = windowSamples.length;
+  if (!N) return;
 
-  let sumMag = 0;
-  let sumMag2 = 0;
-  for (const s of windowSamples) {
-    const m = Math.sqrt(
-      s.acc.x * s.acc.x +
-      s.acc.y * s.acc.y +
-      s.acc.z * s.acc.z
-    );
-    sumMag += m;
-    sumMag2 += m * m;
+  const mags = windowSamples.map(s => s.mag);
+
+  const { dH, powerSpectrum } = computeSpectralEntropy(mags);
+  const LI = computeLI(mags, powerSpectrum);
+  const kappa = computeKappaSigma(mags);
+
+  const R = Math.max(0, Math.min(1, 0.8 + 0.2 * LI));
+  const RMSE_SL = Math.max(0, Math.min(0.3, kappa / 5));
+
+  const t_c = (LI - 0.5) * 0.08 + (dH + 0.5) * -0.04;
+
+  const evetoClass = applyEVeto(dH, LI, kappa);
+
+  let lapsoClass = "phi";
+  if (evetoClass === "Q_DRIVEN_VALID") {
+    lapsoClass = "q";
+  } else {
+    const softOrdered  = (dH < -0.2);
+    const softLocked   = (LI > 0.7);
+    const softPhysical = (kappa <= 1.5);
+    const score = [softOrdered, softLocked, softPhysical].filter(Boolean).length;
+    if (score >= 2) lapsoClass = "borderline";
   }
-  const mean = sumMag / n;
-  const variance = sumMag2 / n - mean * mean;
-  const std = Math.sqrt(Math.max(variance, 0));
 
-  // A partir de aquí solo es demo:
-  const li = Math.max(0, Math.min(1, 1 - std / 3));       // locking ~ inverso de la dispersión
-  const r = Math.max(0, Math.min(1, 0.9 + (Math.random() * 0.1))); // demo
-  const rmse_sl = Math.max(0, Math.min(0.3, std / 10));   // demo
-  const dh = -0.25 + (Math.random() - 0.5) * 0.2;         // demo ΔH
-  const t_c = (Math.random() - 0.5) * 0.08;               // demo tC
+  windowSamples = [];
 
   const sample = {
     node_id: "browser-mobile",
     region: "desconocida",
-    li,
-    r,
-    rmse_sl,
-    dh,
-    t_c,
+    li: LI,
+    r: R,
+    rmse_sl: RMSE_SL,
+    dh: dH,
+    t_c: t_c,
     ts: new Date().toISOString(),
+    class: lapsoClass,
     meta: {
-      n_samples: n,
-      mean_acc: mean,
-    },
+      kappa_sigma: kappa,
+      eveto_class: evetoClass,
+      n_samples: N
+    }
   };
 
-  // Limpiar ventana
-  windowSamples = [];
+  els.li.textContent = LI.toFixed(2);
+  els.r.textContent = R.toFixed(2);
+  els.rmse.textContent = RMSE_SL.toFixed(2);
+  els.dh.textContent = dH.toFixed(3);
+  els.tc.textContent = (t_c >= 0 ? "+" : "") + t_c.toFixed(3);
 
-  // Actualizar UI + enviar al backend
-  updateUI(sample);
+  if (lapsoClass === "phi") {
+    els.tcMode.textContent = "LAPSO φ-driven (ruido / baseline)";
+  } else if (lapsoClass === "borderline") {
+    els.tcMode.textContent = "Zona borderline (transición φ ↔ Q)";
+  } else {
+    els.tcMode.textContent = "Candidata Q-driven (E-Veto aprobado)";
+  }
+
+  els.status.textContent = `ventana local: ${lapsoClass} · E-Veto: ${evetoClass}`;
+
   sendReport(sample);
 }
 
-// 6) Manejar sensores de movimiento (Android/iOS)
+// ================== SENSORES ==================
+
 function attachDeviceMotion() {
   function handler(event) {
     if (!sensorActive) return;
@@ -326,15 +280,13 @@ function attachDeviceMotion() {
   window.addEventListener("devicemotion", handler);
 }
 
-// 7) Gestionar permisos (iOS necesita requestPermission)
 async function requestSensorPermission() {
-  els.status.textContent = "Solictando permiso de sensor…";
+  els.status.textContent = "solicitando permiso de sensor…";
 
   if (
     typeof DeviceMotionEvent !== "undefined" &&
     typeof DeviceMotionEvent.requestPermission === "function"
   ) {
-    // iOS
     try {
       const res = await DeviceMotionEvent.requestPermission();
       if (res === "granted") {
@@ -348,13 +300,13 @@ async function requestSensorPermission() {
       els.status.textContent = "Error al solicitar permiso de sensor (iOS).";
     }
   } else {
-    // Android / otros
     sensorActive = true;
     els.status.textContent = "Sensor activo (modo estándar). Nodo enviando ventanas Σ.";
   }
 }
 
-// 8) Inicializar flujo
+// ================== INIT ==================
+
 async function init() {
   await loadConfig();
   attachDeviceMotion();
