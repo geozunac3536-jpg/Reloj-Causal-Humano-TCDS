@@ -37,6 +37,31 @@ Este repositorio contiene un nodo web experimental de la **Teoría Cromodinámic
 
 El resultado es un **“Reloj Causal Humano”** que convierte el ruido de movimiento del entorno en un índice visual de coherencia dinámica (t_C) y estructura espectral (f_dom).
 
+🌍 Únete a la Red Global de Coherencia TCDS
+El Reloj Causal Humano es más que un experimento; es una red distribuida de ciencia ciudadana. Para validar el paradigma TCDS (Teoría Cromodinámica Sincrónica) y detectar precursores sísmicos antes que los sistemas tradicionales, necesitamos alcanzar la Masa Crítica de Nodos.
+📱 ¿Cómo funciona tu contribución?
+Tu dispositivo móvil se convierte en un sensor de alta precisión que mide la Entropía de Shannon (\Delta H) del ruido ambiental. Al conectarte, ayudas a filtrar el caos y detectar la "Señal Q" (Coherencia Estructural) que precede a los grandes eventos.
+ * Sin descargas: Todo ocurre en el navegador.
+ * Sin costo: Consumo de datos marginal (< 10 MB/noche).
+ * Sin riesgos: No accedemos a tu cámara, micrófono ni archivos. Solo acelerómetro anónimo.
+🚀 Instrucciones para Convertirte en Nodo
+Sigue estos pasos para integrar tu dispositivo a la red de monitoreo en tiempo real:
+ * Accede al Sensor:
+   Abre el siguiente enlace en tu navegador móvil (Chrome/Safari recomendado):
+   👉 https://reloj-causal-humano-tcds.vercel.app/
+ * Activa los Permisos:
+   Toca el botón "ACTIVAR NODO". Tu navegador te pedirá permiso para usar los sensores de movimiento. Acepta para iniciar la telemetría.
+ * Mantén la Vigilia:
+   Deja la pestaña abierta.
+   * Modo Ideal: Conecta tu celular al cargador y déjalo en una superficie plana y firme (mesa de noche, escritorio) mientras duermes.
+   * El sistema evitará que la pantalla se apague por completo o seguirá funcionando en segundo plano (dependiendo de tu SO).
+ * Monitorea la Red:
+   Puedes ver tu contribución y el estado global de la coherencia en el Dashboard Maestro desde cualquier PC:
+   👉 https://reloj-causal-humano-tcds.vercel.app/dashboard.html
+🛡️ Privacidad y Ciencia Abierta
+Cada dato enviado es anónimo y encriptado. Tu participación ayuda a construir una base de datos pública y auditada para la predicción de riesgos naturales.
+> "La coherencia de un sistema no depende de la fuerza de sus partes, sino de la sincronización de sus nodos." — Paradigma TCDS
+
 ---
 
 ## Uso
