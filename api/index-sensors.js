@@ -90,7 +90,164 @@ async function sendReport(sample) {
     console.warn("[TCDS] Error enviando reporte a /api/reports:", e);
   }
 }
+// ================== HELPERS E-VETO (ΔH, LI, κΣ) ==================
 
+/**
+ * Calcula la entropía espectral de Shannon normalizada ΔH ∈ [-1, 0]
+ * a partir de una ventana de magnitudes de aceleración.
+ * - Ventana: últimos M puntos (ej. 128)
+ * - FFT simplificada (DFT) sobre [0, M/2)
+ */
+function computeSpectralEntropy(mags) {
+  const N = mags.length;
+  if (!N) return { dH: 0, powerSpectrum: [] };
+
+  // Tomamos los últimos M puntos para mantener costo bajo
+  const M = Math.min(128, N);
+  const start = N - M;
+  const x = new Array(M);
+
+  // Quitamos media (centrado)
+  let sum = 0;
+  for (let i = 0; i < M; i++) {
+    const v = mags[start + i];
+    sum += v;
+    x[i] = v;
+  }
+  const mean = sum / M;
+  for (let i = 0; i < M; i++) {
+    x[i] -= mean;
+  }
+
+  const K = Math.floor(M / 2);    // sólo hasta Nyquist
+  const power = new Array(K).fill(0);
+
+  // DFT simplificada (O(M^2), pero M pequeño => ok en móvil)
+  const TWO_PI = 2 * Math.PI;
+  for (let k = 0; k < K; k++) {
+    let re = 0;
+    let im = 0;
+    for (let n = 0; n < M; n++) {
+      const angle = -TWO_PI * k * n / M;
+      const xn = x[n];
+      re += xn * Math.cos(angle);
+      im += xn * Math.sin(angle);
+    }
+    power[k] = re * re + im * im;
+  }
+
+  let totalPower = 0;
+  for (let k = 0; k < K; k++) totalPower += power[k];
+  if (totalPower <= 0) {
+    return { dH: 0, powerSpectrum: power };
+  }
+
+  // Shannon H en base 2
+  let H = 0;
+  for (let k = 0; k < K; k++) {
+    const pk = power[k];
+    if (pk <= 0) continue;
+    const p = pk / totalPower;
+    H += -p * (Math.log(p) / Math.log(2));
+  }
+
+  const Hmax = Math.log(K) / Math.log(2);
+  const dH = Hmax > 0 ? (H / Hmax - 1.0) : 0;   // ∈ [-1, 0]
+
+  return { dH, powerSpectrum: power };
+}
+
+/**
+ * Calcula Locking Index (LI) combinando:
+ * - ruido relativo (σ / |μ|)
+ * - factor de agudeza espectral (Q ~ pico / ancho de banda)
+ */
+function computeLI(mags, powerSpectrum) {
+  const N = mags.length;
+  if (!N) return 0;
+
+  // Estadística de ventana
+  let sum = 0;
+  for (let i = 0; i < N; i++) sum += mags[i];
+  const mean = sum / N;
+
+  let varSum = 0;
+  for (let i = 0; i < N; i++) {
+    const d = mags[i] - mean;
+    varSum += d * d;
+  }
+  const std = Math.sqrt(varSum / N);
+
+  const noiseFactor = std / (Math.abs(mean) + 1e-6);
+  const liRaw = 1 / (1 + noiseFactor);   // ruido↑ → LI↓
+
+  // Factor Q aproximado
+  let Q = 1;
+  if (powerSpectrum && powerSpectrum.length > 4) {
+    let maxVal = -Infinity;
+    let maxIdx = 0;
+    for (let k = 1; k < powerSpectrum.length; k++) {
+      if (powerSpectrum[k] > maxVal) {
+        maxVal = powerSpectrum[k];
+        maxIdx = k;
+      }
+    }
+    if (maxVal > 0) {
+      const half = maxVal / Math.E;  // "ancho" a ~1/e
+      let left = maxIdx, right = maxIdx;
+      for (let k = maxIdx; k >= 0; k--) {
+        if (powerSpectrum[k] < half) { left = k; break; }
+      }
+      for (let k = maxIdx; k < powerSpectrum.length; k++) {
+        if (powerSpectrum[k] < half) { right = k; break; }
+      }
+      const bwBins = Math.max(1, right - left);
+      const fPeak = maxIdx / powerSpectrum.length; // (0..0.5 aprox)
+      Q = fPeak > 0 ? (fPeak / (bwBins / powerSpectrum.length)) : 1;
+    }
+  }
+
+  const qNorm = Math.tanh(Q / 8);          // saturamos Q
+  const li = Math.max(0, Math.min(1, liRaw * (0.5 + 0.5 * qNorm)));
+  return li;
+}
+
+/**
+ * κΣ: razón entre gradiente máximo y amplitud máxima.
+ * κΣ > 1 → crecimiento físicamente sospechoso (artefacto).
+ */
+function computeKappaSigma(mags) {
+  const N = mags.length;
+  if (N < 2) return 0;
+  let maxGrad = 0;
+  let maxAmp = 0;
+  for (let i = 1; i < N; i++) {
+    const prev = mags[i - 1];
+    const cur = mags[i];
+    const grad = Math.abs(cur - prev);
+    if (grad > maxGrad) maxGrad = grad;
+    const amp = Math.abs(cur);
+    if (amp > maxAmp) maxAmp = amp;
+  }
+  if (maxAmp <= 0) return 0;
+  return maxGrad / maxAmp;
+}
+
+/**
+ * Filtro E-Veto (núcleo canónico):
+ * ΔH < −0.4, LI > 0.85, κΣ ≤ 1.0
+ */
+function applyEVeto(dH, LI, kappa) {
+  const isOrdered  = (dH < -0.4);
+  const isLocked   = (LI > 0.85);
+  const isPhysical = (kappa <= 1.0);
+
+  if (isOrdered && isLocked && isPhysical) {
+    return "Q_DRIVEN_VALID";      // ALERTA_SISMICA_VALIDA
+  } else {
+    return "PHI_OR_ARTEFACT";     // φ-driven o ruido
+  }
+}
 // 5) Procesar una muestra cruda del sensor -> construir ventana Σ de ejemplo
 function processRawSample(acc, timestamp) {
   windowSamples.push({ acc, timestamp });
