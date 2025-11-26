@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reloj Causal Humano — TCDS · Docs ES/EN</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+/* ----------------------------- */
+/*     THEME — DARK MODERN       */
+/* ----------------------------- */
+
+:root {
+  --bg: #0b0e17;
+  --bg-alt: #111522;
+  --fg: #e5e7f3;
+  --fg-muted: #9aa3c2;
+
+  --accent: #35e0ff;
+  --accent2: #ff6bff;
+
+  --border: rgba(255,255,255,0.08);
+  --radius: 14px;
+  --shadow: 0 10px 35px rgba(0,0,0,0.35);
+
+  --font-main: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.58;
+  padding: 0;
+}
+
+.wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.2rem 1.2rem 3rem;
+}
+
+/* ----------------------------- */
+/*          TAB SWITCH           */
+/* ----------------------------- */
+
+.tab-buttons {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.4rem;
+}
+
+.tab-buttons button {
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tab-buttons button.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.tab-buttons button:hover {
+  filter: brightness(1.14);
+}
+
+.tab-content {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.tab-content.active {
+  display: block;
+  opacity: 1;
+}
+
+/* ----------------------------- */
+/*            TITLES             */
+/* ----------------------------- */
+
+h1, h2, h3 {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+h1 {
+  font-size: 1.9rem;
+  margin-bottom: 0.6rem;
+}
+
+h2 {
+  margin-top: 2rem;
+  font-size: 1.35rem;
+  color: var(--accent);
+}
+
+h3 {
+  color: var(--fg-muted);
+  margin-top: 1.4rem;
+}
+
+/* ----------------------------- */
+/*          COMPONENTS           */
+/* ----------------------------- */
+
+.card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  padding: 1.15rem 1.4rem;
+  border-radius: var(--radius);
+  margin: 1.2rem 0;
+  box-shadow: var(--shadow);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+td, th {
+  border: 1px solid var(--border);
+  padding: 0.65rem;
+  font-size: 0.9rem;
+}
+
+code {
+  font-family: var(--font-mono);
+  background: #151a28;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+</style>
+
+</head>
+
+<body>
+<div class="wrapper">
+
+<!-- ------------------------- -->
+<!--       TOP TITLE           -->
+<!-- ------------------------- -->
+<h1>📡 Reloj Causal Humano — TCDS (v1.5)<br><span style="font-size:0.8em;color:var(--fg-muted);">Σ-metrics · ΔH · t<sub>C</sub> · Arnold–Shannon Filter</span></h1>
+
+<!-- ------------------------- -->
+<!--     LANGUAGE SWITCH       -->
+<!-- ------------------------- -->
+<div class="tab-buttons">
+  <button class="active" onclick="switchTab('es')">🇪🇸 Español</button>
+  <button onclick="switchTab('en')">🇺🇸 English</button>
+</div>
+
+<!-- ====================================================== -->
+<!-- ====================  TAB: ESPAÑOL =================== -->
+<!-- ====================================================== -->
+<div id="es" class="tab-content active">
+
+<h2>🌌 ¿Qué es el Reloj Causal Humano?</h2>
+
+<p>
+El <strong>Reloj Causal Humano — TCDS</strong> es un nodo experimental distribuido
+que mide en tiempo real:
+</p>
+
+<ul>
+<li><strong>Coherencia Σ</strong> (LI, R, RMSE_SL)</li>
+<li><strong>Entropía de Shannon normalizada (ΔH)</strong></li>
+<li><strong>Tiempo Causal t<sub>C</sub></strong> — gradiente ingenieril dΣ/dt</li>
+<li><strong>Clasificación Q-driven vs φ-driven</strong> mediante el <strong>Filtro de Honestidad (E-Veto)</strong></li>
+</ul>
+
+<div class="card">
+  <strong>Regla de validez (Canon TCDS):</strong><br><br>
+  <code>LI ≥ 0.90</code> ·
+  <code>R > 0.95</code> ·
+  <code>RMSE_SL < 0.10</code> ·
+  <code>ΔH ≤ −0.20</code><br><br>
+  Si esta condición no se cumple → <strong>la coherencia es falsa</strong>.
+</div>
+
+<h2>🌍 Únete a la Red Global de Coherencia TCDS</h2>
+<p>
+Tu móvil se convierte en un nodo científico real dentro de una red global de ciencia ciudadana.
+</p>
+
+<div class="card">
+  <strong>Para activar tu nodo:</strong><br><br>
+  1. Abre el reloj: <a href="https://reloj-causal-humano-tcds.vercel.app/">https://reloj-causal-humano-tcds.vercel.app/</a><br>
+  2. Pulsa <em>ACTIVAR NODO</em> y concede permisos.<br>
+  3. Deja la pestaña abierta (modo nocturno ideal).<br>
+  4. Dashboard global: <a href="https://reloj-causal-humano-tcds.vercel.app/dashboard.html">dashboard</a>
+</div>
+
+<h2>🔬 Funciones científicas</h2>
+
+<h3>Σ-metrics</h3>
+<table>
+<tr><th>Métrica</th><th>Canon</th><th>Propósito</th></tr>
+<tr><td>LI</td><td>≥ 0.90</td><td>Locking coherente</td></tr>
+<tr><td>R</td><td>> 0.95</td><td>Estabilidad</td></tr>
+<tr><td>RMSE_SL</td><td>< 0.10</td><td>Bajo ruido</td></tr>
+<tr><td>ΔH</td><td>≤ −0.20</td><td>E-Veto: caída entrópica</td></tr>
+</table>
+
+<h3>Tiempo Causal t<sub>C</sub></h3>
+<code>t_C = dΣ/dt</code><br>
+Representa la dirección causal emergente.
+
+<h3>E-Veto</h3>
+<p>Sin ΔH negativa → el locking es falso.</p>
+
+<h2>🛡️ Privacidad</h2>
+<ul>
+<li>No usa cámara ni micrófono.</li>
+<li>No recoge datos personales.</li>
+<li>Acelerómetro único.</li>
+<li>Datos 100% anónimos.</li>
+</ul>
+
+<h2>📚 Ecosistema TCDS</h2>
+
+<ul>
+<li>Sitio principal: <a href="https://geozunac3536-jpg.github.io">https://geozunac3536-jpg.github.io</a></li>
+<li>Índice de DOIs: <a href="https://geozunac3536-jpg.github.io/Indice-de-DOI">Indice de DOI</a></li>
+<li>Sistema Predictivo: <a href="https://geozunac3536-jpg.github.io/TCDS-SISTEMA-PREDICTIVO/">TCDS-SISTEMA-PREDICTIVO</a></li>
+<li>Gradiente Económico: <a href="https://geozunac3536-jpg.github.io/TCDS_Gradiente_Economico/">TCDS_Gradiente_Economico</a></li>
+</ul>
+
+<h2>🤝 Apoya el proyecto</h2>
+<p>
+Ko-fi: <a href="https://ko-fi.com/genarocarrasco">https://ko-fi.com/genarocarrasco</a>
+</p>
+
+<h2>👤 Autoría</h2>
+<ul>
+<li><strong>Genaro Carrasco Ozuna</strong></li>
+<li>Email: <a href="mailto:geozunac3536@gmail.com">geozunac3536@gmail.com</a></li>
+<li>ORCID: <a href="https://orcid.org/0009-0005-6358-9910">0009-0005-6358-9910</a></li>
+<li>Web: <a href="https://geozunac3536-jpg.github.io">geozunac3536-jpg.github.io</a></li>
+</ul>
+
+</div><!-- END TAB ES -->
+
+
+<!-- ====================================================== -->
+<!-- ==================== TAB: ENGLISH ==================== -->
+<!-- ====================================================== -->
+<div id="en" class="tab-content">
+
+<h2>🌌 What is the Human Causal Clock?</h2>
+
+<p>
+The <strong>Human Causal Clock — TCDS</strong> is a distributed experimental node
+measuring in real time:
+</p>
+
+<ul>
+<li><strong>Σ-coherence metrics</strong> (LI, R, RMSE_SL)</li>
+<li><strong>Normalized Shannon Entropy (ΔH)</strong></li>
+<li><strong>Causal Time t<sub>C</sub></strong> — coherence gradient dΣ/dt</li>
+<li><strong>Q-driven vs φ-driven</strong> classification via the <strong>Honesty Filter (E-Veto)</strong></li>
+</ul>
+
+<div class="card">
+  <strong>Validity rule (TCDS Canon):</strong><br><br>
+  <code>LI ≥ 0.90</code> ·
+  <code>R > 0.95</code> ·
+  <code>RMSE_SL < 0.10</code> ·
+  <code>ΔH ≤ −0.20</code><br><br>
+  If unmet → <strong>coherence is invalid</strong>.
+</div>
+
+<h2>🌍 Join the Global Coherence Network</h2>
+<p>Your phone becomes a real scientific node.</p>
+
+<div class="card">
+  <strong>To activate your node:</strong><br><br>
+  1. Open: <a href="https://reloj-causal-humano-tcds.vercel.app/">https://reloj-causal-humano-tcds.vercel.app/</a><br>
+  2. Press <em>ACTIVATE NODE</em> and allow motion sensor.<br>
+  3. Keep tab open (overnight recommended).<br>
+  4. Dashboard: <a href="https://reloj-causal-humano-tcds.vercel.app/dashboard.html">dashboard</a>
+</div>
+
+<h2>🔬 Scientific functions</h2>
+
+<h3>Σ-metrics</h3>
+<table>
+<tr><th>Metric</th><th>Canon</th><th>Purpose</th></tr>
+<tr><td>LI</td><td>≥ 0.90</td><td>Coherent locking</td></tr>
+<tr><td>R</td><td>> 0.95</td><td>Stability</td></tr>
+<tr><td>RMSE_SL</td><td>< 0.10</td><td>Low noise</td></tr>
+<tr><td>ΔH</td><td>≤ −0.20</td><td>E-Veto entropy drop</td></tr>
+</table>
+
+<h3>Causal Time t<sub>C</sub></h3>
+<code>t_C = dΣ/dt</code>
+
+<h3>E-Veto Filter</h3>
+<p>Without entropy drop → locking is false.</p>
+
+<h2>🛡️ Privacy</h2>
+<ul>
+<li>No camera or mic.</li>
+<li>No personal data stored.</li>
+<li>Accelerometer only.</li>
+<li>100% anonymous.</li>
+</ul>
+
+<h2>📚 TCDS Ecosystem</h2>
+
+<ul>
+<li>Main site: <a href="https://geozunac3536-jpg.github.io">https://geozunac3536-jpg.github.io</a></li>
+<li>DOI Index: <a href="https://geozunac3536-jpg.github.io/Indice-de-DOI">DOI Index</a></li>
+<li>Predictive System: <a href="https://geozunac3536-jpg.github.io/TCDS-SISTEMA-PREDICTIVO/">TCDS Predictive System</a></li>
+<li>Economic Gradient: <a href="https://geozunac3536-jpg.github.io/TCDS_Gradiente_Economico/">TCDS Economic Gradient</a></li>
+</ul>
+
+<h2>🤝 Support the project</h2>
+<p>Ko-fi: <a href="https://ko-fi.com/genarocarrasco">https://ko-fi.com/genarocarrasco</a></p>
+
+<h2>👤 Author</h2>
+<ul>
+<li><strong>Genaro Carrasco Ozuna</strong></li>
+<li>Email: <a href="mailto:geozunac3536@gmail.com">geozunac3536@gmail.com</a></li>
+<li>ORCID: <a href="https://orcid.org/0009-0005-6358-9910">0009-0005-6358-9910</a></li>
+<li>Website: <a href="https://geozunac3536-jpg.github.io">geozunac3536-jpg.github.io</a></li>
+</ul>
+
+</div><!-- END TAB EN -->
+
+<footer>
+© 2025 · TCDS — Teoría Cromodinámica Sincrónica · Reloj Causal Humano (v1.5)
+</footer>
+
+</div><!-- wrapper -->
+
+<script>
+function switchTab(lang) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-buttons button').forEach(btn => btn.classList.remove('active'));
+
+  document.getElementById(lang).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>
