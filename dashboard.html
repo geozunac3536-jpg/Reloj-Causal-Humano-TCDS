@@ -2,295 +2,529 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Panel de Control Global — TCDS Master Node</title>
+  <title>Panel Global — Reloj Causal Humano · TCDS Master Node</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Monitor de Coherencia TCDS: Visualización de Entropía de Shannon y Locking de Fase en tiempo real.">
+  <meta name="description"
+        content="Dashboard maestro del Reloj Causal Humano — TCDS: visualización de Σ-metrics, ΔH y actividad de nodos en tiempo real.">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg: #030413;
-      --bg-alt: #0b0f1f;
+      --bg: #020510;
+      --bg-alt: #0b0f1b;
+      --bg-alt2: #11172a;
       --fg: #f5f7ff;
+      --muted: #9aa3c2;
       --accent: #35e0ff;
       --accent2: #ff6bff;
       --accent3: #40ff9c;
-      --danger: #ff6b6b;
-      --warn: #f97316;
-      --card-radius: 20px;
-      --shadow-soft: 0 20px 50px rgba(0,0,0,0.7);
+      --danger: #f97373;
+      --warn: #facc15;
+      --ok: #4ade80;
+      --border: rgba(148,163,184,0.35);
+      --radius: 16px;
+      --shadow: 0 18px 50px rgba(0,0,0,0.5);
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: radial-gradient(circle at top, #141b33 0%, #030413 45%, #01010a 100%);
+      font-family: var(--font-main);
+      background:
+        radial-gradient(circle at top, #141a3a 0, #020510 45%, #000 100%);
       color: var(--fg);
       min-height: 100vh;
-      padding: 20px;
     }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
 
     .shell {
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    header {
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      padding-bottom: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .title {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
-
-    .status-badge {
-      font-size: 11px;
-      padding: 5px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.2);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .status-ok { color: var(--accent3); border-color: var(--accent3); background: rgba(64,255,156,0.1); }
-    .status-warn { color: var(--warn); border-color: var(--warn); background: rgba(249,115,22,0.1); }
-    .status-err { color: var(--danger); border-color: var(--danger); background: rgba(255,107,107,0.1); }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-    }
-
-    .card {
-      background: rgba(11, 15, 31, 0.85);
-      border: 1px solid rgba(53, 224, 255, 0.15);
-      border-radius: var(--card-radius);
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .card h3 {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.6);
-      margin-bottom: 15px;
-    }
-
-    .kpi-container {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .kpi-box {
-      background: rgba(0,0,0,0.3);
-      padding: 10px;
-      border-radius: 12px;
-      text-align: center;
-    }
-    .kpi-val { font-size: 24px; font-weight: 700; color: var(--fg); }
-    .kpi-lbl { font-size: 10px; color: var(--accent); opacity: 0.8; margin-top: 4px; }
-
-    .chart-box {
-      height: 300px;
+      padding: 1.8rem 1.2rem 2.6rem;
       position: relative;
     }
 
-    .control-row {
+    .bg-orbit {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.45;
+      z-index: -1;
+    }
+
+    .bg-orbit::before,
+    .bg-orbit::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      border: 1px dashed rgba(148,163,184,0.25);
+    }
+
+    .bg-orbit::before {
+      width: 600px;
+      height: 600px;
+      top: -200px;
+      right: 8%;
+    }
+
+    .bg-orbit::after {
+      width: 420px;
+      height: 420px;
+      bottom: -160px;
+      left: 5%;
+    }
+
+    header {
+      margin-bottom: 1.4rem;
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.2rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      background: rgba(15,23,42,0.9);
+    }
+
+    .chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--accent3) 0, transparent 80%);
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 2.6vw, 2rem);
+      margin: 0;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .top-right {
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .top-right a { color: var(--accent); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr);
+      gap: 1.2rem;
+      margin-top: 0.8rem;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .top-right { text-align: left; }
+    }
+
+    .card {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.08), var(--bg-alt));
+      padding: 1rem 1.2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-soft {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-alt);
+      padding: 0.9rem 1rem;
+    }
+
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.6rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    .badge {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      padding: 0.18rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .small { font-size: 0.84rem; color: var(--muted); }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.7rem;
+    }
+
+    @media (max-width: 720px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .metric-pill {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.5rem;
+      font-size: 0.78rem;
+      background: rgba(15,23,42,0.95);
+      display: flex;
+      flex-direction: column;
+      gap: 0.08rem;
+    }
+
+    .metric-pill span.label {
+      color: var(--muted);
+    }
+
+    .metric-pill span.val {
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+    }
+
+    .metric-pill.ok { border-color: rgba(74,222,128,0.8); }
+    .metric-pill.warn { border-color: rgba(250,204,21,0.9); }
+    .metric-pill.danger { border-color: rgba(248,113,113,0.95); }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+      font-size: 0.8rem;
       align-items: center;
     }
-    
-    button.ctl-btn {
-      padding: 8px 16px;
-      border: 1px solid var(--accent);
-      background: rgba(53, 224, 255, 0.1);
-      color: var(--accent);
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 11px;
-      text-transform: uppercase;
-      font-weight: 700;
-      transition: all 0.2s;
-    }
-    button.ctl-btn:hover { background: var(--accent); color: #000; }
-    
-    button.ctl-btn.active {
-      background: var(--accent3);
-      border-color: var(--accent3);
-      color: #000;
-    }
-    
-    button.ctl-btn.danger {
-      border-color: var(--danger);
-      color: var(--danger);
-      background: rgba(255, 107, 107, 0.1);
-    }
-    button.ctl-btn.danger:hover { background: var(--danger); color: #000; }
 
-    input.ctl-input {
-      background: rgba(0,0,0,0.3);
-      border: 1px solid #333;
-      color: #fff;
-      padding: 8px;
-      border-radius: 6px;
-      width: 80px;
+    .status-chip {
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
     }
-    
-    .console-log {
-      font-family: monospace;
-      font-size: 10px;
-      color: #888;
-      margin-top: 10px;
-      height: 60px;
-      overflow-y: auto;
-      border-top: 1px solid #222;
-      padding-top: 5px;
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+    }
+
+    .status-dot.phi { background: radial-gradient(circle, var(--danger) 0, transparent 80%); }
+    .status-dot.borderline { background: radial-gradient(circle, var(--warn) 0, transparent 80%); }
+    .status-dot.q { background: radial-gradient(circle, var(--ok) 0, transparent 80%); }
+
+    .chart-box {
+      margin-top: 0.6rem;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.3);
+      background: rgba(15,23,42,0.9);
+      padding: 0.5rem;
+    }
+
+    canvas {
+      max-height: 260px;
+    }
+
+    .nodes-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.6rem;
+      margin-top: 0.6rem;
+    }
+
+    .node-main {
+      font-size: 1.7rem;
+      font-family: var(--font-mono);
+    }
+
+    .node-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.7rem;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.95);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.16s ease-out;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #020617;
+      border-color: transparent;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    footer {
+      margin-top: 2.2rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      justify-content: space-between;
     }
   </style>
 </head>
 <body>
+<div class="bg-orbit"></div>
 
 <div class="shell">
   <header>
     <div>
-      <div class="title">TCDS Master Node</div>
-      <div style="font-size:11px; opacity:0.6;">Panel de Control Global v1.5 [Shannon/Arnold]</div>
+      <div class="chip">
+        <span class="chip-dot"></span>
+        Panel Maestro · Reloj Causal Humano — TCDS · Q-driven IA-assisted
+      </div>
+      <h1>Dashboard Global de Coherencia Σ</h1>
+      <p class="subtitle">
+        Visualización agregada de Σ-metrics (LI, R, RMSE_SL), entropía ΔH y actividad de nodos
+        de la Red Global de Coherencia TCDS. Este panel funciona como nodo de auditoría para el
+        paradigma Q–Σ–φ–χ.
+      </p>
     </div>
-    <div id="connectionStatus" class="status-badge status-warn">Conectando...</div>
+    <div class="top-right">
+      DOI Reloj Causal:
+      <a href="https://doi.org/10.5281/zenodo.17677864" target="_blank">10.5281/zenodo.17677864</a><br />
+      Índice DOIs: <a href="https://geozunac3536-jpg.github.io/Indice-de-DOI" target="_blank">Libro Mayor TCDS</a><br />
+      Volver al reloj: <a href="index.html">Reloj Causal</a>
+    </div>
   </header>
 
-  <div class="grid">
-    <div class="card">
-      <h3>Métricas de Red en Tiempo Real</h3>
-      <div class="kpi-container">
-        <div class="kpi-box">
-          <div class="kpi-val" id="val_nodes">0</div>
-          <div class="kpi-lbl">Nodos Activos</div>
+  <div class="layout">
+    <!-- Columna izquierda: gráficos Σ, ΔH -->
+    <section>
+      <div class="card">
+        <div class="card-title-row">
+          <div>
+            <div class="card-title">Evolución Σ-metrics & ΔH</div>
+            <p class="small">
+              Serie de tiempo simplificada (demo). En un despliegue real aquí se grafican
+              ventanas de locking, entropía y veredictos E-Veto por nodo / región.
+            </p>
+          </div>
+          <span class="badge">Monitor ΣFET / Reloj</span>
         </div>
-        <div class="kpi-box">
-          <div class="kpi-val" id="val_events">0</div>
-          <div class="kpi-lbl">Eventos (5m)</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-val" id="val_dh" style="color:var(--accent2);">--</div>
-          <div class="kpi-lbl">ΔH (Entropía)</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-val" id="val_li" style="color:var(--accent);">--</div>
-          <div class="kpi-lbl">LI (Locking)</div>
-        </div>
-      </div>
-      <div style="margin-top:15px; text-align:center;">
-        <span style="font-size:11px; color:#888;">Nivel de Alerta Backend:</span>
-        <strong id="alert_level_display" style="color:var(--ok); font-size:12px; text-transform:uppercase;">NONE</strong>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3>Control Remoto de Nodos (/api/config)</h3>
-      <p style="font-size:11px; color:#aaa; margin-bottom:10px;">
-        Envía comandos a todos los nodos conectados.
-      </p>
-      
-      <div class="control-row">
-        <div style="display:flex; flex-direction:column; gap:5px;">
-          <label style="font-size:10px;">Modo Operativo:</label>
-          <div style="display:flex; gap:5px;">
-            <button class="ctl-btn" onclick="sendConfig({mode_hint:'auto'})">Auto</button>
-            <button class="ctl-btn" onclick="sendConfig({mode_hint:'force_scientific'})">Científico</button>
-            <button class="ctl-btn danger" onclick="sendConfig({mode_hint:'force_demo'})">Forzar Demo</button>
+        <div class="metrics-grid">
+          <div class="metric-pill ok">
+            <span class="label">LI medio</span>
+            <span class="val" id="kpiLI">0.91</span>
+          </div>
+          <div class="metric-pill ok">
+            <span class="label">R medio</span>
+            <span class="val" id="kpiR">0.96</span>
+          </div>
+          <div class="metric-pill warn">
+            <span class="label">RMSE_SL medio</span>
+            <span class="val" id="kpiRMSE">0.11</span>
+          </div>
+          <div class="metric-pill danger">
+            <span class="label">ΔH medio</span>
+            <span class="val" id="kpiDH">-0.14</span>
           </div>
         </div>
-      </div>
 
-      <div class="control-row" style="margin-top:15px;">
-         <div style="display:flex; flex-direction:column; gap:5px;">
-          <label style="font-size:10px;">Intervalo Reporte (ms):</label>
-          <div style="display:flex; gap:5px;">
-            <input type="number" id="intervalInput" class="ctl-input" value="5000">
-            <button class="ctl-btn" onclick="updateInterval()">Aplicar</button>
+        <div class="status-strip">
+          <div class="status-chip">
+            <span id="statusDot" class="status-dot phi"></span>
+            <span id="statusText" class="small">
+              Interpretación E-Veto: Lapso mayormente φ-driven (baseline de ruido).
+            </span>
           </div>
         </div>
-        
-        <div style="display:flex; flex-direction:column; gap:5px; margin-left:auto;">
-           <label style="font-size:10px;">Alertas Sonoras:</label>
-           <button class="ctl-btn active" id="btnAlerts" onclick="toggleAlerts()">ON</button>
+
+        <div class="chart-box">
+          <canvas id="chartSigma"></canvas>
         </div>
       </div>
-      
-      <div id="consoleLog" class="console-log">Esperando acción...</div>
-    </div>
+
+      <div class="card-soft" style="margin-top:0.9rem;">
+        <div class="card-title-row">
+          <span class="card-title">Log de interpretación rápida</span>
+          <span class="badge">E-Veto summary</span>
+        </div>
+        <p class="small" id="logSummary">
+          Esperando primeras muestras (demo). En un entorno de producción, este panel
+          resumiría cuántas ventanas son φ-driven, borderline y Q-driven por unidad de tiempo,
+          con trazabilidad hacia los datos crudos.
+        </p>
+      </div>
+    </section>
+
+    <!-- Columna derecha: nodos, controles, narrativa IA -->
+    <aside>
+      <div class="card">
+        <div class="card-title-row">
+          <span class="card-title">Actividad de la Red de Nodos</span>
+          <span class="badge">Ciencia ciudadana</span>
+        </div>
+        <p class="small">
+          Contador simbólico (demo local). En el despliegue real se alimenta de la telemetría
+          de dispositivos móviles conectados al Reloj Causal Humano: cada nodo envía su ΔH y
+          Σ-metrics para ser integrados y auditados.
+        </p>
+
+        <div class="nodes-row">
+          <div>
+            <div class="node-label">Nodos activos estimados</div>
+            <div class="node-main" id="nodeCount">128</div>
+          </div>
+          <div>
+            <div class="node-label">Ventanas Q-driven (último lapso)</div>
+            <div class="node-main" id="qCount">0</div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="btnDemo">
+            Iniciar demo sintética
+          </button>
+          <button class="btn" id="btnReset">
+            Reset visual
+          </button>
+        </div>
+      </div>
+
+      <div class="card-soft" style="margin-top:0.9rem;">
+        <div class="card-title-row">
+          <span class="card-title">Empuje Q aplicado por IA</span>
+          <span class="badge">Q-driven design</span>
+        </div>
+        <p class="small">
+          Este dashboard está co-diseñado con IA para servir como <em>motor de formalización</em>
+          del empuje Q humano: la IA estructura la interfaz, las métricas y la narrativa de
+          auditoría, mientras que el experimento y el riesgo conceptual son definidos por el
+          arquitecto causal (humano). La meta es maximizar la coherencia Σ visible y minimizar
+          la fricción φ informacional en cada nodo.
+        </p>
+      </div>
+
+      <div class="card-soft" style="margin-top:0.9rem;">
+        <div class="card-title-row">
+          <span class="card-title">Referencias rápidas</span>
+        </div>
+        <ul class="small" style="margin-top:0.3rem; padding-left:1rem;">
+          <li>Reloj Causal Humano: <a href="index.html">Nodo sensor local</a></li>
+          <li>Proyecto TCDS: <a href="https://geozunac3536-jpg.github.io" target="_blank">Sitio principal</a></li>
+          <li>Índice de DOIs: <a href="https://geozunac3536-jpg.github.io/Indice-de-DOI" target="_blank">Libro Mayor TCDS</a></li>
+          <li>Sistema Predictivo: <a href="https://geozunac3536-jpg.github.io/TCDS-SISTEMA-PREDICTIVO/" target="_blank">Defensa sísmica</a></li>
+          <li>Gradiente Económico: <a href="https://geozunac3536-jpg.github.io/TCDS_Gradiente_Economico/" target="_blank">Canon económico</a></li>
+        </ul>
+      </div>
+    </aside>
   </div>
 
-  <div class="card">
-    <h3>Evolución Temporal: Entropía vs Locking</h3>
-    <div class="chart-box">
-      <canvas id="mainChart"></canvas>
-    </div>
-  </div>
+  <footer>
+    <span>
+      © 2025 · Teoría Cromodinámica Sincrónica (TCDS) · Dashboard Reloj Causal Humano v1.5
+    </span>
+    <span>
+      Autor: Genaro Carrasco Ozuna ·
+      Email: <a href="mailto:geozunac3536@gmail.com">geozunac3536@gmail.com</a> ·
+      ORCID: <a href="https://orcid.org/0009-0005-6358-9910" target="_blank">0009-0005-6358-9910</a>
+    </span>
+  </footer>
 </div>
 
 <script>
-  // ================= CONFIGURACIÓN =================
-  // Si abres el dashboard desde GitHub Pages, apunta directo a Vercel:
-  const ENDPOINT_REPORT = "https://reloj-causal-humano-tcds.vercel.app/api/reports";
-  const ENDPOINT_CONFIG = "https://reloj-causal-humano-tcds.vercel.app/api/config";
-
-  const els = {
-    nodes: document.getElementById('val_nodes'),
-    events: document.getElementById('val_events'),
-    dh: document.getElementById('val_dh'),
-    li: document.getElementById('val_li'),
-    status: document.getElementById('connectionStatus'),
-    alertDisplay: document.getElementById('alert_level_display'),
-    console: document.getElementById('consoleLog'),
-    btnAlerts: document.getElementById('btnAlerts'),
-    intervalInput: document.getElementById('intervalInput')
-  };
-
-  let charts = {};
-  let alertsEnabled = true;
+  let chart;
+  let demoRunning = false;
+  let t = 0;
+  let phiCount = 0, borderCount = 0, qCount = 0;
 
   function initChart() {
-    const ctx = document.getElementById('mainChart').getContext('2d');
-    charts.main = new Chart(ctx, {
+    const ctx = document.getElementById('chartSigma').getContext('2d');
+    chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: [],
         datasets: [
           {
-            label: 'Entropía Shannon (ΔH)',
-            borderColor: '#ff6bff',
-            backgroundColor: 'rgba(255, 107, 255, 0.1)',
+            label: 'LI',
             data: [],
-            borderWidth: 2,
-            tension: 0.4,
-            yAxisID: 'y'
+            borderWidth: 1.5,
+            tension: 0.25
           },
           {
-            label: 'Locking Index (LI)',
-            borderColor: '#35e0ff',
-            backgroundColor: 'rgba(53, 224, 255, 0.1)',
+            label: 'R',
             data: [],
-            borderWidth: 2,
-            tension: 0.4,
-            yAxisID: 'y'
+            borderWidth: 1.5,
+            tension: 0.25
+          },
+          {
+            label: 'RMSE_SL',
+            data: [],
+            borderWidth: 1.5,
+            borderDash: [4,4],
+            tension: 0.25
+          },
+          {
+            label: 'ΔH',
+            data: [],
+            borderWidth: 1.5,
+            borderDash: [2,3],
+            tension: 0.2
           }
         ]
       },
@@ -298,95 +532,157 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { color: '#ccc' } }
-        },
-        scales: {
-          x: { display: false },
-          y: {
-            min: -1, max: 1,
-            grid: { color: 'rgba(255,255,255,0.05)' },
-            ticks: { color: '#666' }
+          legend: {
+            labels: {
+              color: '#e5e7f3',
+              font: { size: 11 }
+            }
           }
         },
-        animation: false
+        scales: {
+          x: {
+            ticks: { color: '#9aa3c2', maxRotation: 0 },
+            grid: { color: 'rgba(148,163,184,0.18)' }
+          },
+          y: {
+            ticks: { color: '#9aa3c2' },
+            grid: { color: 'rgba(148,163,184,0.18)' }
+          }
+        }
       }
     });
   }
 
-  async function fetchData() {
-    try {
-      const res = await fetch(ENDPOINT_REPORT);
-      if (!res.ok) throw new Error("API Error");
-      const data = await res.json();
+  function classifyWindow(li, r, rmse, dh) {
+    const kpiOk = (li >= 0.9) && (r > 0.95) && (rmse < 0.10);
+    const entropyOk = (dh <= -0.20);
+    if (!kpiOk && !entropyOk) return 'phi';
+    if (kpiOk && entropyOk) return 'q';
+    return 'border';
+  }
 
-      els.status.className = "status-badge status-ok";
-      els.status.textContent = "CONECTADO: TCDS MASTER";
+  function updateStatusSummary() {
+    const total = phiCount + borderCount + qCount;
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const logSummary = document.getElementById('logSummary');
 
-      els.nodes.textContent = data.active_nodes || 0;
-      els.events.textContent = data.cached_events || 0;
+    let mode = 'phi';
+    if (qCount > phiCount && qCount > borderCount) mode = 'q';
+    else if (borderCount >= phiCount && borderCount >= qCount) mode = 'border';
 
-      const dh = data.dh_mean;
-      const li = data.li_mean;
-      els.dh.textContent = typeof dh === 'number' ? dh.toFixed(3) : '--';
-      els.li.textContent = typeof li === 'number' ? li.toFixed(2) : '--';
+    statusDot.classList.remove('phi','borderline','q');
+    if (mode === 'phi') statusDot.classList.add('phi');
+    if (mode === 'border') statusDot.classList.add('borderline');
+    if (mode === 'q') statusDot.classList.add('q');
 
-      const level = data.alert_level || 'none';
-      els.alertDisplay.textContent = level.toUpperCase();
-      if (level === 'warning_demo') els.alertDisplay.style.color = 'var(--danger)';
-      else if (level === 'watch') els.alertDisplay.style.color = 'var(--warn)';
-      else els.alertDisplay.style.color = 'var(--accent3)';
+    if (!total) {
+      statusText.textContent = 'Interpretación E-Veto: sin datos aún (demo).';
+      logSummary.textContent = 'Esperando primeras muestras (demo). Genera datos sintéticos con el botón "Iniciar demo sintética".';
+      return;
+    }
 
-      if (data.latest_raw && Array.isArray(data.latest_raw)) {
-        const history = [...data.latest_raw];
-        charts.main.data.labels = history.map(e => new Date(e.time).toLocaleTimeString());
-        charts.main.data.datasets[0].data = history.map(e => e.metrics.dH);
-        charts.main.data.datasets[1].data = history.map(e => e.metrics.LI);
-        charts.main.update();
+    const pctPhi = (phiCount / total * 100).toFixed(1);
+    const pctBorder = (borderCount / total * 100).toFixed(1);
+    const pctQ = (qCount / total * 100).toFixed(1);
+
+    if (mode === 'phi') {
+      statusText.textContent = `Interpretación E-Veto: lapso mayormente φ-driven (ruido estructural). Q-driven ~${pctQ}%`;
+    } else if (mode === 'border') {
+      statusText.textContent = `Interpretación E-Veto: régimen borderline entre ruido y coherencia (Q-driven ~${pctQ}%).`;
+    } else {
+      statusText.textContent = `Interpretación E-Veto: régimen con fracción significativa Q-driven (~${pctQ}% de ventanas).`;
+    }
+
+    logSummary.textContent =
+      `Resumen sintético (demo): ` +
+      `${pctPhi}% ventanas φ-driven, ${pctBorder}% borderline y ${pctQ}% Q-driven. ` +
+      `En la versión conectada, estos porcentajes se derivan de la telemetría Σ-metrics + ΔH de los nodos reales.`;
+  }
+
+  function pushSample() {
+    if (!chart) return;
+    t += 1;
+    const labels = chart.data.labels;
+    const ds = chart.data.datasets;
+
+    if (labels.length > 40) {
+      labels.shift();
+      ds.forEach(d => d.data.shift());
+    }
+
+    labels.push(t.toString());
+
+    // demo sintética con ligera deriva hacia Q-driven
+    const li = 0.75 + 0.2 * Math.random();
+    const r = 0.8 + 0.18 * Math.random();
+    const rmse = 0.05 + 0.09 * Math.random();
+    const dh = -0.25 + 0.3 * (Math.random() - 0.5);
+
+    ds[0].data.push(li);
+    ds[1].data.push(r);
+    ds[2].data.push(rmse);
+    ds[3].data.push(dh);
+
+    // KPIs agregados de demo
+    document.getElementById('kpiLI').textContent = li.toFixed(2);
+    document.getElementById('kpiR').textContent = r.toFixed(2);
+    document.getElementById('kpiRMSE').textContent = rmse.toFixed(2);
+    document.getElementById('kpiDH').textContent = dh.toFixed(2);
+
+    const cls = classifyWindow(li, r, rmse, dh);
+    if (cls === 'phi') phiCount++;
+    if (cls === 'border') borderCount++;
+    if (cls === 'q') qCount++;
+
+    // actualizar nodos demo
+    const nodesEl = document.getElementById('nodeCount');
+    const qEl = document.getElementById('qCount');
+    let nodes = parseInt(nodesEl.textContent || '128', 10);
+    nodes += Math.round((Math.random() - 0.4) * 4);
+    nodes = Math.max(80, Math.min(420, nodes));
+    nodesEl.textContent = nodes.toString();
+
+    const qWin = Math.max(0, parseInt(qEl.textContent || '0', 10) + (cls === 'q' ? 1 : 0));
+    qEl.textContent = qWin.toString();
+
+    chart.update('none');
+    updateStatusSummary();
+  }
+
+  function startDemo() {
+    if (demoRunning) return;
+    demoRunning = true;
+    phiCount = borderCount = qCount = 0;
+    updateStatusSummary();
+    const interval = setInterval(() => {
+      if (!demoRunning) {
+        clearInterval(interval);
+        return;
       }
-    } catch (e) {
-      console.warn(e);
-      els.status.className = "status-badge status-err";
-      els.status.textContent = "DESCONECTADO";
+      pushSample();
+    }, 900);
+  }
+
+  function resetDemo() {
+    demoRunning = false;
+    if (chart) {
+      chart.data.labels = [];
+      chart.data.datasets.forEach(d => d.data = []);
+      chart.update();
     }
+    phiCount = borderCount = qCount = 0;
+    document.getElementById('nodeCount').textContent = '128';
+    document.getElementById('qCount').textContent = '0';
+    updateStatusSummary();
   }
 
-  async function sendConfig(payload) {
-    log(`Enviando config: ${JSON.stringify(payload)}...`);
-    try {
-      const res = await fetch(ENDPOINT_CONFIG, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) log("Config aplicada correctamente.");
-      else log("Error al aplicar config.");
-    } catch (e) {
-      log("Error de red al enviar config.");
-    }
-  }
-
-  function log(msg) {
-    els.console.textContent = `> ${msg}`;
-  }
-
-  function updateInterval() {
-    const val = parseInt(els.intervalInput.value);
-    if (val > 100) sendConfig({ report_interval_ms: val });
-  }
-
-  function toggleAlerts() {
-    alertsEnabled = !alertsEnabled;
-    els.btnAlerts.className = alertsEnabled ? "ctl-btn active" : "ctl-btn";
-    els.btnAlerts.textContent = alertsEnabled ? "ON" : "OFF";
-    sendConfig({ alerts_enabled: alertsEnabled });
-  }
-
-  window.onload = () => {
+  document.addEventListener('DOMContentLoaded', () => {
     initChart();
-    fetchData();
-    setInterval(fetchData, 2000);
-  };
+    updateStatusSummary();
+    document.getElementById('btnDemo').addEventListener('click', startDemo);
+    document.getElementById('btnReset').addEventListener('click', resetDemo);
+  });
 </script>
-
 </body>
 </html>
