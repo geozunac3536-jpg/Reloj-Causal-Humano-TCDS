@@ -2,7 +2,7 @@
 
 > **TECHNOLOGY READINESS LEVEL (TRL): 6**
 > *System Validated in Relevant Environment (Distributed Web/Mobile Network)*
-> **DOI:** [10.5281/zenodo.17677864](https://doi.org/10.5281/zenodo.17677864)
+> **DOI:** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17677864.svg)](https://doi.org/10.5281/zenodo.17677864)
 
 ---
 
