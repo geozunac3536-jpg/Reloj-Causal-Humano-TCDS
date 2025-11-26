@@ -1,49 +1,38 @@
 // /api/reports.js
 // CEREBRO MAESTRO TCDS (Ingesta + Analítica + E-Veto de red)
-// Autor: Genaro Carrasco Ozuna · Alineado al Reloj Causal Humano v1.5
 
 import { applyCors } from "./utils/cors.js";
 
-// Memoria volátil (vive mientras la función esté "caliente")
 let events = [];
-
-// Pequeña cola para histórico del dashboard (últimos N eventos crudos)
-const MAX_HISTORY = 50;
 let history = [];
+const MAX_HISTORY = 50;
 
-// Configuración de umbrales E-Veto (nivel red)
 const EVETO_THRESHOLDS = {
   li_min: 0.9,
   r_min: 0.95,
   rmse_max: 0.10,
-  dh_max: -0.20 // ΔH debe ser <= -0.20 para pasar filtro
+  dh_max: -0.20
 };
 
-// Clasificación de ventana según Σ-metrics + ΔH
-function classifyWindow(sample) {
-  const { li, r, rmse_sl, dh } = sample;
+function normalizeTimestamp(ts) {
+  if (!ts) return new Date().toISOString();
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
 
+function classifyWindowNetwork(li, r, rmse, dh) {
   const kpiOk =
     typeof li === "number" && li >= EVETO_THRESHOLDS.li_min &&
     typeof r === "number" && r > EVETO_THRESHOLDS.r_min &&
-    typeof rmse_sl === "number" && rmse_sl < EVETO_THRESHOLDS.rmse_max;
+    typeof rmse === "number" && rmse < EVETO_THRESHOLDS.rmse_max;
 
   const entropyOk = typeof dh === "number" && dh <= EVETO_THRESHOLDS.dh_max;
 
-  if (!kpiOk && !entropyOk) return "phi";       // φ-driven (ruido)
-  if (kpiOk && entropyOk) return "q";           // Q-driven (coherencia válida)
-  return "borderline";                          // zona intermedia
+  if (!kpiOk && !entropyOk) return "phi";
+  if (kpiOk && entropyOk) return "q";
+  return "borderline";
 }
 
-// Normaliza timestamp a ISO
-function normalizeTimestamp(ts) {
-  if (!ts) return new Date().toISOString();
-  const date = new Date(ts);
-  if (isNaN(date.getTime())) return new Date().toISOString();
-  return date.toISOString();
-}
-
-// Ingesta de un reporte desde el nodo (frontend)
 function ingestEvent(body) {
   const sample = {
     node_id: body.node_id || "anon",
@@ -54,19 +43,18 @@ function ingestEvent(body) {
     dh: typeof body.dh === "number" ? body.dh : null,
     t_c: typeof body.t_c === "number" ? body.t_c : null,
     ts: normalizeTimestamp(body.ts),
+    class: body.class || null,
     meta: body.meta || {}
   };
 
-  const cls = classifyWindow(sample);
-  sample.class = cls;
+  const netClass = classifyWindowNetwork(sample.li, sample.r, sample.rmse_sl, sample.dh);
+  sample.class = netClass;
 
-  // Almacenar en memoria
   events.push(sample);
-  if (events.length > 1000) {
-    events = events.slice(-1000);
+  if (events.length > 2000) {
+    events = events.slice(-2000);
   }
 
-  // Histórico para gráficos ΔH vs LI, etc.
   history.push(sample);
   if (history.length > MAX_HISTORY) {
     history = history.slice(-MAX_HISTORY);
@@ -75,36 +63,33 @@ function ingestEvent(body) {
   return sample;
 }
 
-// Cálculo agregado para el dashboard
 function buildDashboardPayload() {
   if (events.length === 0) {
     return {
       ok: true,
       stats: {
         total_events: 0,
-        counts: {
-          phi: 0,
-          borderline: 0,
-          q: 0
-        },
-        averages: {
-          li: null,
-          r: null,
-          rmse_sl: null,
-          dh: null,
-          t_c: null
-        }
+        counts: { phi: 0, borderline: 0, q: 0 },
+        averages: { li: null, r: null, rmse_sl: null, dh: null, t_c: null }
       },
       latest_raw: [],
-      thresholds: EVETO_THRESHOLDS
+      thresholds: EVETO_THRESHOLDS,
+      active_nodes: 0,
+      cached_events: 0,
+      dh_mean: null,
+      li_mean: null,
+      alert_level: "none"
     };
   }
 
   let sumLI = 0, sumR = 0, sumRMSE = 0, sumDH = 0, sumTC = 0;
   let nLI = 0, nR = 0, nRMSE = 0, nDH = 0, nTC = 0;
   let phi = 0, border = 0, q = 0;
+  const nodeSet = new Set();
 
   for (const e of events) {
+    nodeSet.add(e.node_id);
+
     if (typeof e.li === "number") { sumLI += e.li; nLI++; }
     if (typeof e.r === "number") { sumR += e.r; nR++; }
     if (typeof e.rmse_sl === "number") { sumRMSE += e.rmse_sl; nRMSE++; }
@@ -118,25 +103,39 @@ function buildDashboardPayload() {
 
   const total = events.length;
 
+  const averages = {
+    li: nLI ? sumLI / nLI : null,
+    r: nR ? sumR / nR : null,
+    rmse_sl: nRMSE ? sumRMSE / nRMSE : null,
+    dh: nDH ? sumDH / nDH : null,
+    t_c: nTC ? sumTC / nTC : null
+  };
+
+  const counts = { phi, borderline: border, q };
+
+  const qRatio = total ? q / total : 0;
+  const alert_level =
+    qRatio > 0.25 && averages.dh !== null && averages.dh < -0.5 && averages.li !== null && averages.li > 0.9
+      ? "warning_demo"
+      : qRatio > 0.10
+        ? "watch"
+        : "none";
+
   const payload = {
     ok: true,
     stats: {
       total_events: total,
-      counts: {
-        phi,
-        borderline: border,
-        q
-      },
-      averages: {
-        li: nLI ? sumLI / nLI : null,
-        r: nR ? sumR / nR : null,
-        rmse_sl: nRMSE ? sumRMSE / nRMSE : null,
-        dh: nDH ? sumDH / nDH : null,
-        t_c: nTC ? sumTC / nTC : null
-      }
+      counts,
+      averages
     },
     latest_raw: history,
-    thresholds: EVETO_THRESHOLDS
+    thresholds: EVETO_THRESHOLDS,
+    // Alias para paneles tipo "Master Node"
+    active_nodes: nodeSet.size,
+    cached_events: total,
+    dh_mean: averages.dh,
+    li_mean: averages.li,
+    alert_level
   };
 
   return payload;
@@ -145,18 +144,22 @@ function buildDashboardPayload() {
 export default async function handler(req, res) {
   applyCors(req, res);
 
-  // Preflight CORS
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // POST → nodo envía una ventana Σ + ΔH
   if (req.method === "POST") {
     try {
-      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
       const sample = ingestEvent(body);
 
-      console.log("[REPORT] Nodo:", sample.node_id, "class:", sample.class, "LI:", sample.li, "ΔH:", sample.dh);
+      console.log(
+        "[REPORT] Nodo:", sample.node_id,
+        "| class:", sample.class,
+        "| LI:", sample.li,
+        "| ΔH:", sample.dh,
+        "| κΣ:", sample.meta?.kappa_sigma
+      );
 
       return res.status(200).json({
         ok: true,
@@ -169,7 +172,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // GET → dashboard pide agregados E-Veto + histórico
   if (req.method === "GET") {
     try {
       const payload = buildDashboardPayload();
@@ -180,6 +182,5 @@ export default async function handler(req, res) {
     }
   }
 
-  // Método no soportado
   return res.status(405).json({ error: "Método no permitido" });
 }
