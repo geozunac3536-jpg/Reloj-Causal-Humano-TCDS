@@ -1,134 +1,178 @@
-// api/reports.js
+// /api/reports.js
 // CEREBRO MAESTRO TCDS (Ingesta + Analítica + E-Veto de red)
-// Autor: Genaro Carrasco Ozuna
+// Autor: Genaro Carrasco Ozuna · Alineado al Reloj Causal Humano v1.5
 
-// Memoria volátil (vive mientras el servidor esté "caliente")
+import { applyCors } from "./utils/cors.js";
+
+// Memoria volátil (vive mientras la función esté "caliente")
 let events = [];
 
-// Pequeña cola para histórico del dashboard (últimos 50 eventos crudos)
+// Pequeña cola para histórico del dashboard (últimos N eventos crudos)
 const MAX_HISTORY = 50;
 let history = [];
 
 // Configuración de umbrales E-Veto (nivel red)
 const EVETO_THRESHOLDS = {
   li_min: 0.9,
-  dh_max: -0.5 // ΔH debe ser <= -0.5 para pasar filtro
+  r_min: 0.95,
+  rmse_max: 0.10,
+  dh_max: -0.20 // ΔH debe ser <= -0.20 para pasar filtro
 };
 
-export default async function handler(req, res) {
-  // 1. CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+// Clasificación de ventana según Σ-metrics + ΔH
+function classifyWindow(sample) {
+  const { li, r, rmse_sl, dh } = sample;
 
+  const kpiOk =
+    typeof li === "number" && li >= EVETO_THRESHOLDS.li_min &&
+    typeof r === "number" && r > EVETO_THRESHOLDS.r_min &&
+    typeof rmse_sl === "number" && rmse_sl < EVETO_THRESHOLDS.rmse_max;
+
+  const entropyOk = typeof dh === "number" && dh <= EVETO_THRESHOLDS.dh_max;
+
+  if (!kpiOk && !entropyOk) return "phi";       // φ-driven (ruido)
+  if (kpiOk && entropyOk) return "q";           // Q-driven (coherencia válida)
+  return "borderline";                          // zona intermedia
+}
+
+// Normaliza timestamp a ISO
+function normalizeTimestamp(ts) {
+  if (!ts) return new Date().toISOString();
+  const date = new Date(ts);
+  if (isNaN(date.getTime())) return new Date().toISOString();
+  return date.toISOString();
+}
+
+// Ingesta de un reporte desde el nodo (frontend)
+function ingestEvent(body) {
+  const sample = {
+    node_id: body.node_id || "anon",
+    region: body.region || "desconocida",
+    li: typeof body.li === "number" ? body.li : null,
+    r: typeof body.r === "number" ? body.r : null,
+    rmse_sl: typeof body.rmse_sl === "number" ? body.rmse_sl : null,
+    dh: typeof body.dh === "number" ? body.dh : null,
+    t_c: typeof body.t_c === "number" ? body.t_c : null,
+    ts: normalizeTimestamp(body.ts),
+    meta: body.meta || {}
+  };
+
+  const cls = classifyWindow(sample);
+  sample.class = cls;
+
+  // Almacenar en memoria
+  events.push(sample);
+  if (events.length > 1000) {
+    events = events.slice(-1000);
+  }
+
+  // Histórico para gráficos ΔH vs LI, etc.
+  history.push(sample);
+  if (history.length > MAX_HISTORY) {
+    history = history.slice(-MAX_HISTORY);
+  }
+
+  return sample;
+}
+
+// Cálculo agregado para el dashboard
+function buildDashboardPayload() {
+  if (events.length === 0) {
+    return {
+      ok: true,
+      stats: {
+        total_events: 0,
+        counts: {
+          phi: 0,
+          borderline: 0,
+          q: 0
+        },
+        averages: {
+          li: null,
+          r: null,
+          rmse_sl: null,
+          dh: null,
+          t_c: null
+        }
+      },
+      latest_raw: [],
+      thresholds: EVETO_THRESHOLDS
+    };
+  }
+
+  let sumLI = 0, sumR = 0, sumRMSE = 0, sumDH = 0, sumTC = 0;
+  let nLI = 0, nR = 0, nRMSE = 0, nDH = 0, nTC = 0;
+  let phi = 0, border = 0, q = 0;
+
+  for (const e of events) {
+    if (typeof e.li === "number") { sumLI += e.li; nLI++; }
+    if (typeof e.r === "number") { sumR += e.r; nR++; }
+    if (typeof e.rmse_sl === "number") { sumRMSE += e.rmse_sl; nRMSE++; }
+    if (typeof e.dh === "number") { sumDH += e.dh; nDH++; }
+    if (typeof e.t_c === "number") { sumTC += e.t_c; nTC++; }
+
+    if (e.class === "phi") phi++;
+    else if (e.class === "q") q++;
+    else if (e.class === "borderline") border++;
+  }
+
+  const total = events.length;
+
+  const payload = {
+    ok: true,
+    stats: {
+      total_events: total,
+      counts: {
+        phi,
+        borderline: border,
+        q
+      },
+      averages: {
+        li: nLI ? sumLI / nLI : null,
+        r: nR ? sumR / nR : null,
+        rmse_sl: nRMSE ? sumRMSE / nRMSE : null,
+        dh: nDH ? sumDH / nDH : null,
+        t_c: nTC ? sumTC / nTC : null
+      }
+    },
+    latest_raw: history,
+    thresholds: EVETO_THRESHOLDS
+  };
+
+  return payload;
+}
+
+export default async function handler(req, res) {
+  applyCors(req, res);
+
+  // Preflight CORS
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // 2. INGESTA: el nodo Shannon envía datos aquí
+  // POST → nodo envía una ventana Σ + ΔH
   if (req.method === "POST") {
     try {
-      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      if (!body || !body.metrics) {
-        return res.status(400).json({ error: "Payload inválido (falta metrics)" });
-      }
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+      const sample = ingestEvent(body);
 
-      const now = Date.now();
+      console.log("[REPORT] Nodo:", sample.node_id, "class:", sample.class, "LI:", sample.li, "ΔH:", sample.dh);
 
-      const event = {
-        device_id: body.device_id || "anon",
-        time: new Date(body.timestamp || now).toISOString(),
-        geo: body.geo || null,
-        metrics: {
-          // Mantener nombres compatibles con el nodo
-          aMag: body.metrics.aMag || 0,
-          LI: body.metrics.LI || 0,
-          R: body.metrics.R || 0,
-          dH: body.metrics.dH || 0,
-          Q: body.metrics.Q_Arnold || 0
-        }
-      };
-
-      // Guardamos en buffer de 5 minutos para estadísticas rápidas
-      events.push({
-        ...event,
-        _ts: now
+      return res.status(200).json({
+        ok: true,
+        class: sample.class,
+        ts: sample.ts
       });
-
-      // Limpiamos eventos viejos (> 5 min)
-      const FIVE_MIN = 5 * 60 * 1000;
-      events = events.filter(e => (now - e._ts) < FIVE_MIN);
-
-      // Guardamos en histórico global (últimos 50 crudos para el dashboard)
-      history.push(event);
-      if (history.length > MAX_HISTORY) history.shift();
-
-      console.log(
-        `[INGESTA] Nodo: ${event.device_id.slice(0, 6)} | LI=${event.metrics.LI.toFixed(2)} | dH=${event.metrics.dH.toFixed(3)}`
-      );
-
-      return res.status(200).json({ ok: true });
     } catch (err) {
       console.error("Error en POST /api/reports:", err);
-      return res.status(500).json({ error: "Error interno en ingesta" });
+      return res.status(500).json({ error: "Error al procesar reporte" });
     }
   }
 
-  // 3. DASHBOARD: el panel global pide aquí las estadísticas
+  // GET → dashboard pide agregados E-Veto + histórico
   if (req.method === "GET") {
     try {
-      const now = Date.now();
-      const recent = events; // ya están filtrados a 5 min
-      const total = recent.length;
-
-      const avg = (key) => {
-        if (total === 0) return 0;
-        return recent.reduce((acc, e) => acc + (e.metrics[key] || 0), 0) / total;
-      };
-
-      // 3.1. KPI de red
-      const activeNodes = new Set(recent.map(e => e.device_id)).size;
-
-      const tc_mean = avg("tC"); // por si en versiones futuras añades tC
-      const li_mean = avg("LI");
-      const r_mean  = avg("R");
-      const dh_mean = avg("dH");
-      const q_mean  = avg("Q");
-
-      // 3.2. E-Veto de red: porcentaje de eventos coherentes
-      const coherent = recent.filter(e =>
-        e.metrics.LI >= EVETO_THRESHOLDS.li_min &&
-        e.metrics.dH <= EVETO_THRESHOLDS.dh_max
-      );
-
-      const coherent_count = coherent.length;
-      const coherence_ratio = total > 0 ? coherent_count / total : 0;
-
-      // Nivel de alerta simple basado en coherencia de red
-      let alert_level = "none";
-      if (coherent_count > 0 && coherence_ratio > 0.3) {
-        alert_level = "watch"; // hay algo estructurado, pero no dominante
-      }
-      if (coherent_count > 10 && coherence_ratio > 0.6) {
-        alert_level = "warning_demo"; // para demos: mostrar que “algo pasa”
-      }
-
-      const payload = {
-        status: "TCDS Master Node Online",
-        active_nodes: activeNodes,
-        cached_events: total,
-        tc_mean,
-        li_mean,
-        r_mean,
-        dh_mean,
-        q_mean,
-        coherent_events: coherent_count,
-        coherence_ratio,
-        alert_level,
-        // histórico crudo para gráficas ΔH vs LI
-        latest_raw: history
-      };
-
+      const payload = buildDashboardPayload();
       return res.status(200).json(payload);
     } catch (err) {
       console.error("Error en GET /api/reports:", err);
@@ -136,6 +180,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // 4. Método no soportado
+  // Método no soportado
   return res.status(405).json({ error: "Método no permitido" });
 }
