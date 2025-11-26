@@ -1,9 +1,13 @@
 // /api/utils/cors.js
+// Capa de CORS para el backend del Reloj Causal Humano — TCDS
 
 // Dominios que SÍ pueden hablar con tu backend TCDS
 const ALLOWED_ORIGINS = [
   "https://reloj-causal-humano-tcds.vercel.app",
-  "https://geozunac3536-jpg.github.io"
+  "https://tcds-reloj-causal.vercel.app",      // alias previo
+  "https://geozunac3536-jpg.github.io"         // GitHub Pages / Índice DOI
+  // Si en el futuro usas dominio propio o Firebase Hosting:
+  // "https://tu-dominio.com"
 ];
 
 /**
